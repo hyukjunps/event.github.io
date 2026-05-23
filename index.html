@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="light">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+<title>풍산고 행사 안내 디스플레이</title>
+<meta name="description" content="풍산고 행사 빔프로젝터용 급식·학사일정·시간·행사명 순환 표시 시스템" />
+<meta name="theme-color" content="#2563eb" />
+<style>
+:root{
+  --accent:#2563eb;
+  --accent2:#60a5fa;
+  --bg:#eef6ff;
+  --card:rgba(255,255,255,.76);
+  --card2:rgba(255,255,255,.52);
+  --text:#0f172a;
+  --muted:#64748b;
+  --line:rgba(148,163,184,.32);
+  --shadow:0 30px 90px rgba(15,23,42,.18);
+  --danger:#ef4444;
+  --ok:#10b981;
+}
+*{box-sizing:border-box}
+html,body{margin:0;width:100%;height:100%;overflow:hidden}
+body{
+  font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans KR",Roboto,Arial,sans-serif;
+  color:var(--text);
+  background:
+    radial-gradient(900px 480px at 8% 0%, color-mix(in srgb,var(--accent2) 38%,transparent), transparent 62%),
+    radial-gradient(900px 520px at 95% 8%, color-mix(in srgb,var(--accent) 20%,transparent), transparent 65%),
+    linear-gradient(180deg,#f8fbff,var(--bg));
+  word-break:keep-all;
+}
+body::before{
+  content:"";
+  position:fixed; inset:0;
+  pointer-events:none;
+  background-image:
+    linear-gradient(rgba(37,99,235,.06) 1px,transparent 1px),
+    linear-gradient(90deg,rgba(37,99,235,.06) 1px,transparent 1px);
+  background-size:54px 54px;
+  mask-image:linear-gradient(to bottom,rgba(0,0,0,.52),transparent 76%);
+}
+button,input,textarea,select{font:inherit}
+button{cursor:pointer}
+.hidden{display:none!important}
+.app{position:relative;width:100vw;height:100vh;padding:clamp(24px,4vw,58px);z-index:1}
+.display-shell{
+  width:100%;height:100%;
+  border:1px solid var(--line);
+  border-radius:clamp(28px,4vw,54px);
+  background:linear-gradient(135deg,rgba(255,255,255,.82),rgba(255,255,255,.48));
+  box-shadow:var(--shadow);
+  backdrop-filter:blur(22px);
+  overflow:hidden;
+  position:relative;
+}
+.display-shell::after{
+  content:"";
+  position:absolute;right:-120px;top:-120px;width:380px;height:380px;border-radius:110px;
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent2) 55%,transparent),transparent);
+  transform:rotate(18deg);
+  opacity:.86;
+}
+.topbar{
+  position:absolute;left:clamp(28px,4vw,70px);right:clamp(28px,4vw,70px);top:clamp(24px,3vw,50px);
+  display:flex;align-items:center;justify-content:space-between;gap:18px;z-index:5;
+}
+.brand{display:flex;align-items:center;gap:14px;min-width:0}
+.logo{
+  width:58px;height:58px;border-radius:20px;
+  display:grid;place-items:center;
+  color:#fff;font-weight:1000;letter-spacing:-1px;
+  background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#020617));
+  box-shadow:0 18px 36px color-mix(in srgb,var(--accent) 28%,transparent);
+}
+.brandText{min-width:0}
+.brandText b{display:block;font-size:20px;letter-spacing:-.6px}
+.brandText span{display:block;margin-top:3px;font-size:13px;color:var(--muted);font-weight:850}
+.status{display:flex;align-items:center;gap:10px;flex-wrap:wrap;justify-content:flex-end}
+.pill{
+  display:inline-flex;align-items:center;gap:8px;
+  padding:10px 14px;border-radius:999px;
+  background:rgba(255,255,255,.62);
+  border:1px solid var(--line);
+  color:var(--muted);
+  font-weight:950;
+  font-size:14px;
+  backdrop-filter:blur(12px);
+}
+.dot{width:9px;height:9px;border-radius:99px;background:var(--ok);box-shadow:0 0 0 6px color-mix(in srgb,var(--ok) 14%,transparent)}
+.slide{
+  position:absolute;inset:0;
+  padding:clamp(64px,8vw,120px) clamp(42px,6vw,110px);
+  display:grid;grid-template-columns:minmax(0,1fr);align-content:center;
+  opacity:0;transform:translateY(26px) scale(.975);filter:blur(8px);
+  transition:opacity 1.35s ease,transform 1.35s cubic-bezier(.16,1,.3,1),filter 1.35s ease;
+  z-index:2;
+}
+.slide.active{opacity:1;transform:translateY(0) scale(1);filter:blur(0);z-index:3}
+.slide-kicker{
+  display:none!important;align-items:center;gap:10px;width:max-content;
+  padding:12px 16px;border-radius:999px;
+  background:color-mix(in srgb,var(--accent) 11%,white);
+  border:1px solid color-mix(in srgb,var(--accent) 24%,var(--line));
+  color:var(--accent);
+  font-size:clamp(16px,1.5vw,23px);
+  font-weight:1000;
+  letter-spacing:-.2px;
+}
+.slide-title{
+  margin:22px 0 0;
+  font-size:clamp(62px,9vw,146px);
+  line-height:.98;
+  letter-spacing:-5px;
+  font-weight:1000;
+  max-width:1250px;
+}
+.slide-subtitle{
+  margin:24px 0 0;
+  color:var(--muted);
+  font-size:clamp(22px,2.4vw,42px);
+  line-height:1.45;
+  font-weight:850;
+  max-width:1200px;
+}
+.big-list{
+  margin:34px 0 0;
+  display:grid;
+  gap:14px;
+  max-width:1220px;
+}
+.big-item{
+  display:flex;align-items:flex-start;gap:16px;
+  padding:18px 22px;border-radius:26px;
+  background:rgba(255,255,255,.58);
+  border:1px solid var(--line);
+  box-shadow:0 16px 34px rgba(15,23,42,.07);
+  font-size:clamp(24px,2.8vw,46px);
+  line-height:1.28;
+  font-weight:950;
+}
+.big-item::before{
+  content:"";
+  flex:0 0 14px;width:14px;height:14px;border-radius:999px;
+  margin-top:.55em;background:var(--accent);
+  box-shadow:0 0 0 8px color-mix(in srgb,var(--accent) 12%,transparent);
+}
+.meal-meta,.schedule-meta{
+  display:flex;flex-wrap:wrap;gap:10px;margin-top:26px
+}
+.clock-wrap{display:grid;gap:18px}
+.clock-time{
+  font-size:clamp(86px,15vw,226px);
+  line-height:.9;
+  letter-spacing:-9px;
+  font-weight:1000;
+  color:var(--text);
+}
+.clock-date{
+  font-size:clamp(28px,3.4vw,56px);
+  color:var(--muted);
+  font-weight:950;
+}
+.event-grid{
+  display:grid;grid-template-columns:minmax(0,1.15fr) minmax(300px,.85fr);gap:clamp(24px,4vw,70px);align-items:center;
+}
+.event-photo{
+  width:100%;aspect-ratio:4/3;border-radius:42px;overflow:hidden;
+  border:1px solid var(--line);
+  background:linear-gradient(135deg,color-mix(in srgb,var(--accent) 10%,white),rgba(255,255,255,.54));
+  box-shadow:0 24px 60px rgba(15,23,42,.12);
+  display:grid;place-items:center;
+}
+.event-photo img{width:100%;height:100%;object-fit:cover;display:block}
+.event-photo .empty{padding:24px;text-align:center;color:var(--muted);font-weight:950;font-size:24px;line-height:1.5}
+.footerbar{
+  position:absolute;left:clamp(28px,4vw,70px);right:clamp(28px,4vw,70px);bottom:clamp(22px,3vw,44px);
+  z-index:6;display:grid;gap:12px;
+}
+.progress{
+  height:12px;border-radius:999px;background:rgba(255,255,255,.7);border:1px solid var(--line);overflow:hidden;
+}
+.progress > div{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--accent2));transition:width .18s linear}
+.slide-dots{display:flex;gap:9px;justify-content:center}
+.slide-dot{width:10px;height:10px;border-radius:99px;background:rgba(100,116,139,.28);transition:.25s}
+.slide-dot.active{width:34px;background:var(--accent)}
+.admin-fab{
+  position:fixed;right:16px;bottom:16px;z-index:30;
+  border:1px solid var(--line);border-radius:999px;padding:12px 14px;
+  background:rgba(255,255,255,.78);backdrop-filter:blur(16px);
+  color:var(--text);font-weight:1000;
+  box-shadow:0 12px 32px rgba(15,23,42,.12);
+}
+.modal-back{
+  position:fixed;inset:0;z-index:50;
+  display:grid;place-items:center;
+  padding:18px;
+  background:rgba(15,23,42,.45);
+  backdrop-filter:blur(16px);
+}
+.modal{
+  width:min(960px,100%);
+  max-height:min(92vh,900px);
+  overflow:auto;
+  border:1px solid var(--line);
+  border-radius:34px;
+  background:rgba(255,255,255,.92);
+  box-shadow:0 40px 120px rgba(15,23,42,.32);
+}
+.modal-head{
+  position:sticky;top:0;z-index:2;
+  padding:22px 24px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+  background:rgba(255,255,255,.86);backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--line);
+}
+.modal-head h1{margin:0;font-size:28px;letter-spacing:-1px}
+.modal-head p{margin:6px 0 0;color:var(--muted);font-weight:800;line-height:1.55}
+.close-btn,.ghost-btn,.primary-btn,.danger-btn{
+  border:0;border-radius:18px;
+  padding:13px 16px;
+  font-weight:1000;
+}
+.close-btn,.ghost-btn{background:#fff;border:1px solid var(--line);color:var(--text)}
+.primary-btn{color:white;background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 72%,#020617));box-shadow:0 18px 34px color-mix(in srgb,var(--accent) 22%,transparent)}
+.danger-btn{color:#fff;background:linear-gradient(135deg,var(--danger),#991b1b)}
+.modal-body{padding:22px 24px 26px;display:grid;gap:16px}
+.form-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+.field{
+  padding:14px;border-radius:24px;background:rgba(248,250,252,.88);
+  border:1px solid var(--line);
+}
+.field.full{grid-column:1/-1}
+.field label{display:block;font-size:13px;color:var(--muted);font-weight:1000;margin-bottom:8px}
+.field input,.field textarea,.field select{
+  width:100%;border:1px solid var(--line);border-radius:16px;
+  min-height:48px;padding:12px 13px;background:#fff;color:var(--text);
+  font-weight:850;outline:none;
+}
+.field textarea{min-height:94px;resize:vertical;line-height:1.6}
+.field small{display:block;margin-top:8px;color:var(--muted);line-height:1.55;font-weight:750}
+.actions{display:flex;flex-wrap:wrap;gap:10px;justify-content:flex-end;margin-top:4px}
+.preview-img{margin-top:10px;max-height:160px;border-radius:18px;max-width:100%;display:none;border:1px solid var(--line)}
+.toast{
+  position:fixed;left:50%;bottom:26px;transform:translateX(-50%);
+  z-index:70;padding:13px 16px;border-radius:999px;
+  background:rgba(15,23,42,.88);color:white;font-weight:900;
+  box-shadow:0 20px 60px rgba(0,0,0,.24);
+  opacity:0;pointer-events:none;transition:.25s;
+}
+.toast.show{opacity:1;bottom:38px}
+@media (max-width:900px){
+  .event-grid{grid-template-columns:1fr}
+  .event-photo{display:none}
+  .form-grid{grid-template-columns:1fr}
+}
+@media (max-width:640px){
+  html,body{overflow:auto}
+  .app{height:auto;min-height:100vh;padding:12px}
+  .display-shell{height:calc(100vh - 24px);border-radius:28px}
+  .slide{padding:110px 24px 82px}
+  .topbar{left:22px;right:22px}
+  .status .pill:not(:first-child){display:none}
+  .slide-title{font-size:clamp(44px,14vw,86px);letter-spacing:-3px}
+  .big-item{font-size:24px}
+}
+
+/* projector clean mode */
+.admin-fab{display:none!important}
+.topbar,.footerbar{display:none!important}
+html:fullscreen .admin-fab,
+body.fullscreen-clean .admin-fab{display:none!important}
+html:fullscreen .modal-back,
+body.fullscreen-clean .modal-back{display:none!important}
+
+</style>
+</head>
+<body>
+<div class="app">
+  <main class="display-shell" aria-live="polite">
+    <section class="slide active" data-slide="event">
+      <div class="event-grid">
+        <div>
+          
+          <h1 class="slide-title" id="eventTitle">행사명을 입력하세요</h1>
+          <p class="slide-subtitle" id="eventMessage">관리자 설정을 저장하면 빔프로젝터용 화면이 시작됩니다.</p>
+        </div>
+        <div class="event-photo" id="eventPhotoBox">
+          <div class="empty">사진을 넣으면<br>이곳에 크게 표시됩니다.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="slide" data-slide="meal">
+      
+      <h1 class="slide-title" id="mealTitle">오늘의 급식</h1>
+      <div class="meal-meta" id="mealMeta"></div>
+      <div class="big-list" id="mealList"><div class="big-item">급식 정보를 불러오는 중입니다.</div></div>
+    </section>
+
+    <section class="slide" data-slide="schedule">
+      
+      <h1 class="slide-title" id="scheduleTitle">오늘의 학사일정</h1>
+      <div class="schedule-meta" id="scheduleMeta"></div>
+      <div class="big-list" id="scheduleList"><div class="big-item">학사일정을 불러오는 중입니다.</div></div>
+    </section>
+
+    <section class="slide" data-slide="clock">
+      
+      <div class="clock-wrap">
+        <div class="clock-time" id="clockTime">00:00</div>
+        <div class="clock-date" id="clockDate">-</div>
+      </div>
+    </section>
+
+  </main>
+</div>
+
+
+<div class="modal-back" id="adminModal">
+  <section class="modal" role="dialog" aria-modal="true" aria-labelledby="adminTitle">
+    <div class="modal-head">
+      <div>
+        <h1 id="adminTitle">행사 표시 설정</h1>
+        <p>저장하면 설정 화면을 닫고 전체화면을 요청한 뒤, 행사명·급식·학사일정·현재 시간이 기본 7초 간격으로 부드럽게 순환됩니다.</p>
+      </div>
+      <button class="close-btn" id="closeAdminBtn" type="button">닫기</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-grid">
+        <div class="field full">
+          <label for="inputEventName">행사 이름</label>
+          <input id="inputEventName" type="text" placeholder="예: 풍산고 진로 탐구 발표회" />
+        </div>
+        <div class="field full">
+          <label for="inputEventMessage">행사 안내 문구</label>
+          <textarea id="inputEventMessage" placeholder="예: 발표 순서를 기다리는 동안 오늘의 학교 정보를 확인하세요."></textarea>
+        </div>
+        <div class="field">
+          <label for="inputMealTitle">급식 화면 제목</label>
+          <input id="inputMealTitle" type="text" placeholder="예: 오늘의 급식" />
+        </div>
+        <div class="field">
+          <label for="inputScheduleTitle">학사일정 화면 제목</label>
+          <input id="inputScheduleTitle" type="text" placeholder="예: 오늘의 학사일정" />
+        </div>
+        <div class="field full">
+          <label for="inputPhotoEmptyText">사진이 없을 때 표시할 문구</label>
+          <input id="inputPhotoEmptyText" type="text" placeholder="예: 환영합니다" />
+        </div>
+        <div class="field">
+          <label for="inputAccent">대표 색상</label>
+          <input id="inputAccent" type="color" value="#2563eb" />
+          <small>학교 행사 분위기에 맞게 파랑, 초록, 보라 등으로 바꿀 수 있습니다.</small>
+        </div>
+        <div class="field">
+          <label for="inputInterval">화면 전환 시간</label>
+          <select id="inputInterval">
+            <option value="7000">7초</option>
+            <option value="5000">5초</option>
+            <option value="10000">10초</option>
+          </select>
+          <small>기본값은 7초입니다.</small>
+        </div>
+        <div class="field">
+          <label for="inputSchoolName">표시 학교명</label>
+          <input id="inputSchoolName" type="text" value="풍산고등학교" />
+        </div>
+        <div class="field">
+          <label for="inputAutoFullscreen">전체화면</label>
+          <select id="inputAutoFullscreen">
+            <option value="yes">저장할 때 전체화면 요청</option>
+            <option value="no">전체화면 요청 안 함</option>
+          </select>
+        </div>
+        <div class="field full">
+          <label for="inputPhoto">행사 사진 / 포스터 선택</label>
+          <input id="inputPhoto" type="file" accept="image/*" />
+          <img id="photoPreview" class="preview-img" alt="선택한 이미지 미리보기" />
+          <small>사진은 브라우저 localStorage에 저장됩니다. 너무 큰 이미지는 저장이 안 될 수 있으니 2MB 이하를 추천합니다.</small>
+        </div>
+      </div>
+
+      <div class="field full">
+        <label>나이스 연동 정보</label>
+        <small>
+          현재 HTML에는 기존 O.Poong 설정을 기준으로 풍산고 NEIS 코드가 들어가 있습니다.
+          급식은 NEIS mealServiceDietInfo를 직접 사용하고, 학사일정은 기존 O.Poong 학사일정 프록시를 사용합니다.
+          공개 배포용이면 API KEY는 Cloudflare Worker 같은 프록시로 숨기는 것을 권장합니다.
+        </small>
+      </div>
+
+      <div class="actions">
+        <button class="ghost-btn" id="refreshBtn" type="button">자료 다시 불러오기</button>
+        <button class="danger-btn" id="clearPhotoBtn" type="button">사진 제거</button>
+        <button class="primary-btn" id="saveStartBtn" type="button">저장하고 시작</button>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="toast" id="toast">저장되었습니다.</div>
+
+<script>
+const CONFIG_KEY = "opoong_event_display_config_v3";
+const API_KEY = "c5eac2fb880e4aa185e7957a756dd126";
+const ATPT_OFCDC_SC_CODE = "R10";
+const SD_SCHUL_CODE = "8750475";
+// 기존 O.Poong과 같은 학사일정 프록시입니다. Cloudflare Worker에서 NEIS 학사일정을 받아 byDate 형태로 내려주는 구조입니다.
+const SCHEDULE_PROXY_BASE = "https://gkrtkdlfwjd.yyhhjj1068-c2c.workers.dev/?ym=";
+const DEFAULT_CONFIG = {
+  eventName: "행사명을 입력하세요",
+  eventMessage: "잠시 후 행사가 시작됩니다.",
+  mealTitle: "오늘의 급식",
+  scheduleTitle: "오늘의 학사일정",
+  photoEmptyText: "",
+  accent: "#2563eb",
+  interval: 7000,
+  schoolName: "풍산고등학교",
+  autoFullscreen: "yes",
+  photoData: ""
+};
+
+const $ = (q) => document.querySelector(q);
+const $$ = (q) => Array.from(document.querySelectorAll(q));
+const pad2 = (n) => String(n).padStart(2,"0");
+const ymd = (d=new Date()) => `${d.getFullYear()}${pad2(d.getMonth()+1)}${pad2(d.getDate())}`;
+const ym = (d=new Date()) => `${d.getFullYear()}${pad2(d.getMonth()+1)}`;
+const isoDate = (d=new Date()) => `${d.getFullYear()}-${pad2(d.getMonth()+1)}-${pad2(d.getDate())}`;
+const dateKo = (d=new Date()) => new Intl.DateTimeFormat("ko-KR", {dateStyle:"full"}).format(d);
+const timeKo = (d=new Date()) => new Intl.DateTimeFormat("ko-KR", {hour:"2-digit",minute:"2-digit",second:"2-digit",hour12:false}).format(d);
+const escapeHtml = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const stripTags = (s) => String(s ?? "").replace(/<br\s*\/?>/gi,"\n").replace(/<[^>]*>/g,"");
+const cleanMenuName = (s) => stripTags(s).replace(/\s*\([^)]*\d[^)]*\)/g,"").replace(/\d+(?:\.\d+)*/g,"").replace(/\s+/g," ").trim();
+
+let config = loadConfig();
+let activeIndex = 0;
+let slides = [];
+let slideTimer = null;
+let progressTimer = null;
+let wakeLock = null;
+
+function loadConfig(){
+  try{ return {...DEFAULT_CONFIG, ...JSON.parse(localStorage.getItem(CONFIG_KEY)||"{}")}; }
+  catch{ return {...DEFAULT_CONFIG}; }
+}
+function saveConfig(){
+  localStorage.setItem(CONFIG_KEY, JSON.stringify(config));
+}
+function showToast(text){
+  const t = $("#toast");
+  t.textContent = text;
+  t.classList.add("show");
+  setTimeout(()=>t.classList.remove("show"),1600);
+}
+function applyConfig(){
+  document.documentElement.style.setProperty("--accent", config.accent || DEFAULT_CONFIG.accent);
+  document.querySelector('meta[name="theme-color"]').setAttribute("content", config.accent || DEFAULT_CONFIG.accent);
+  $("#eventTitle").textContent = config.eventName || DEFAULT_CONFIG.eventName;
+  $("#eventMessage").textContent = config.eventMessage || DEFAULT_CONFIG.eventMessage;
+  $("#mealTitle").textContent = config.mealTitle || DEFAULT_CONFIG.mealTitle;
+  $("#scheduleTitle").textContent = config.scheduleTitle || DEFAULT_CONFIG.scheduleTitle;
+  const box = $("#eventPhotoBox");
+  if(config.photoData){
+    box.innerHTML = `<img src="${config.photoData}" alt="행사 이미지">`;
+  }else{
+    const emptyText = (config.photoEmptyText || DEFAULT_CONFIG.photoEmptyText || "").trim();
+    box.innerHTML = emptyText ? `<div class="empty">${escapeHtml(emptyText)}</div>` : "";
+  }
+  $("#inputEventName").value = config.eventName || "";
+  $("#inputEventMessage").value = config.eventMessage || "";
+  $("#inputMealTitle").value = config.mealTitle || "";
+  $("#inputScheduleTitle").value = config.scheduleTitle || "";
+  $("#inputPhotoEmptyText").value = config.photoEmptyText || "";
+  $("#inputAccent").value = config.accent || DEFAULT_CONFIG.accent;
+  $("#inputInterval").value = String(config.interval || 7000);
+  $("#inputSchoolName").value = config.schoolName || "풍산고등학교";
+  $("#inputAutoFullscreen").value = config.autoFullscreen || "yes";
+  const prev = $("#photoPreview");
+  if(config.photoData){ prev.src = config.photoData; prev.style.display = "block"; }
+  else{ prev.removeAttribute("src"); prev.style.display = "none"; }
+}
+async function neis(endpoint, params){
+  const q = new URLSearchParams({
+    KEY: API_KEY,
+    Type: "json",
+    pIndex: "1",
+    pSize: "100",
+    ATPT_OFCDC_SC_CODE,
+    SD_SCHUL_CODE,
+    ...params
+  });
+  const res = await fetch(`https://open.neis.go.kr/hub/${endpoint}?${q.toString()}`);
+  if(!res.ok) throw new Error(`NEIS HTTP ${res.status}`);
+  return await res.json();
+}
+function readRows(data, endpoint){
+  const head = data?.[endpoint]?.[0]?.head;
+  const code = head?.[1]?.RESULT?.CODE;
+  if(code && code !== "INFO-000") return [];
+  return data?.[endpoint]?.[1]?.row || [];
+}
+async function loadMeal(){
+  const today = ymd();
+  $("#mealMeta").innerHTML = `<span class="pill">${dateKo()}</span>`;
+  try{
+    const data = await neis("mealServiceDietInfo", {MLSV_YMD: today});
+    const rows = readRows(data, "mealServiceDietInfo");
+    if(!rows.length){
+      $("#mealList").innerHTML = `<div class="big-item">오늘 등록된 급식 정보가 없습니다.</div>`;
+      return;
+    }
+    const html = rows.map(row => {
+      const type = row.MMEAL_SC_NM || "급식";
+      const kcal = row.CAL_INFO ? ` · ${escapeHtml(row.CAL_INFO)}` : "";
+      const items = String(row.DDISH_NM || "")
+        .replace(/<br\s*\/?>/gi,"\n")
+        .split("\n")
+        .map(cleanMenuName)
+        .filter(Boolean)
+        .slice(0, 8);
+      return `<div class="big-item"><div><div style="color:var(--accent);font-size:.55em;margin-bottom:8px">${escapeHtml(type)}${kcal}</div>${items.map(escapeHtml).join(" · ")}</div></div>`;
+    }).join("");
+    $("#mealList").innerHTML = html;
+  }catch(err){
+    $("#mealList").innerHTML = `<div class="big-item">급식 정보를 불러오지 못했습니다. 인터넷 연결 또는 NEIS API 상태를 확인하세요.</div>`;
+    console.warn(err);
+  }
+}
+async function fetchScheduleMonthProxy(yyyymm){
+  const res = await fetch(SCHEDULE_PROXY_BASE + encodeURIComponent(yyyymm), { cache: "no-store" });
+  if(!res.ok) throw new Error("학사일정 프록시 오류 HTTP " + res.status);
+  const data = await res.json();
+  if(!data.ok) throw new Error(data.error || "학사일정 응답 오류");
+  return data.byDate || {};
+}
+async function loadSchedule(){
+  const month = ym();
+  const todayIso = isoDate();
+  $("#scheduleMeta").innerHTML = `<span class="pill">${dateKo()}</span>`;
+  try{
+    const byDate = await fetchScheduleMonthProxy(month);
+    const items = byDate[todayIso] || [];
+    const titles = items
+      .map(it => typeof it === "string" ? it : (it.title || it.EVENT_NM || it.EVENT_CNTNT || ""))
+      .map(s => String(s).trim())
+      .filter(Boolean);
+    if(!titles.length){
+      $("#scheduleList").innerHTML = `<div class="big-item">오늘 등록된 학사일정이 없습니다.</div>`;
+      return;
+    }
+    $("#scheduleList").innerHTML = titles.slice(0,6).map(t=>`<div class="big-item">${escapeHtml(t)}</div>`).join("");
+  }catch(err){
+    $("#scheduleList").innerHTML = `<div class="big-item">학사일정을 프록시에서 불러오지 못했습니다. 프록시 주소 또는 Worker 상태를 확인하세요.</div>`;
+    console.warn(err);
+  }
+}
+function updateClock(){
+  const now = new Date();
+  $("#clockTime").textContent = timeKo(now);
+  $("#clockDate").textContent = dateKo(now);
+}
+function buildDots(){
+  // 하단 상태 막대와 점 표시를 쓰지 않는 순수 디스플레이 모드입니다.
+}
+function showSlide(i){
+  activeIndex = (i + slides.length) % slides.length;
+  slides.forEach((s,idx)=>s.classList.toggle("active", idx === activeIndex));
+}
+function startSlideLoop(){
+  slides = $$(".slide");
+  buildDots();
+  showSlide(activeIndex);
+  clearInterval(slideTimer);
+  slideTimer = setInterval(()=>showSlide(activeIndex + 1), Number(config.interval || 7000));
+}
+function restartProgress(){
+  clearInterval(progressTimer);
+}
+async function refreshData(){
+  await Promise.allSettled([loadMeal(), loadSchedule()]);
+}
+async function requestFullscreenIfNeeded(){
+  if(config.autoFullscreen !== "yes") return;
+  closeAdmin();
+  try{
+    if(!document.fullscreenElement) await document.documentElement.requestFullscreen();
+    document.body.classList.add("fullscreen-clean");
+  }catch(err){
+    showToast("브라우저가 자동 전체화면을 막았습니다. F 키를 눌러주세요.");
+  }
+}
+async function requestWakeLock(){
+  try{
+    if("wakeLock" in navigator){
+      wakeLock = await navigator.wakeLock.request("screen");
+    }
+  }catch(err){ console.warn(err); }
+}
+async function openAdmin(){
+  if(document.fullscreenElement){
+    try{ await document.exitFullscreen(); }catch(_){ }
+  }
+  document.body.classList.remove("fullscreen-clean");
+  $("#adminModal").classList.remove("hidden");
+  applyConfig();
+}
+function closeAdmin(){
+  $("#adminModal").classList.add("hidden");
+}
+function readAdminFields(){
+  config.eventName = $("#inputEventName").value.trim() || DEFAULT_CONFIG.eventName;
+  config.eventMessage = $("#inputEventMessage").value.trim() || DEFAULT_CONFIG.eventMessage;
+  config.mealTitle = $("#inputMealTitle").value.trim() || DEFAULT_CONFIG.mealTitle;
+  config.scheduleTitle = $("#inputScheduleTitle").value.trim() || DEFAULT_CONFIG.scheduleTitle;
+  config.photoEmptyText = $("#inputPhotoEmptyText").value.trim();
+  config.accent = $("#inputAccent").value || DEFAULT_CONFIG.accent;
+  config.interval = Number($("#inputInterval").value || 7000);
+  config.schoolName = $("#inputSchoolName").value.trim() || "풍산고등학교";
+  config.autoFullscreen = $("#inputAutoFullscreen").value || "yes";
+}
+function handlePhoto(file){
+  if(!file) return;
+  if(file.size > 2.2 * 1024 * 1024){
+    alert("이미지가 너무 큽니다. 2MB 이하 이미지로 줄여서 넣어주세요.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    config.photoData = String(reader.result || "");
+    $("#photoPreview").src = config.photoData;
+    $("#photoPreview").style.display = "block";
+  };
+  reader.readAsDataURL(file);
+}
+async function saveAndStart(){
+  readAdminFields();
+  saveConfig();
+  applyConfig();
+  closeAdmin();
+  await requestFullscreenIfNeeded();
+  await requestWakeLock();
+  await refreshData();
+  startSlideLoop();
+}
+
+$("#closeAdminBtn").addEventListener("click", closeAdmin);
+$("#saveStartBtn").addEventListener("click", saveAndStart);
+$("#refreshBtn").addEventListener("click", refreshData);
+$("#clearPhotoBtn").addEventListener("click", () => {
+  config.photoData = "";
+  $("#photoPreview").style.display = "none";
+  $("#photoPreview").removeAttribute("src");
+  showToast("사진이 제거되었습니다.");
+});
+$("#inputPhoto").addEventListener("change", e => handlePhoto(e.target.files?.[0]));
+$("#inputAccent").addEventListener("input", e => document.documentElement.style.setProperty("--accent", e.target.value));
+document.addEventListener("keydown", async (e)=>{
+  if(e.key.toLowerCase() === "a") openAdmin();
+  if(e.key.toLowerCase() === "f") await requestFullscreenIfNeeded();
+  if(e.key === "ArrowRight") showSlide(activeIndex + 1);
+  if(e.key === "ArrowLeft") showSlide(activeIndex - 1);
+});
+
+document.addEventListener("fullscreenchange", () => {
+  document.body.classList.toggle("fullscreen-clean", !!document.fullscreenElement);
+  if(document.fullscreenElement) closeAdmin();
+});
+
+document.addEventListener("visibilitychange", async () => {
+  if(document.visibilityState === "visible") await requestWakeLock();
+});
+
+applyConfig();
+updateClock();
+setInterval(updateClock, 1000);
+refreshData();
+startSlideLoop();
+openAdmin();
+</script>
+</body>
+</html>
