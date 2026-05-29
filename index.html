@@ -146,6 +146,52 @@ button{cursor:pointer}
   margin-top:.55em;background:var(--accent);
   box-shadow:0 0 0 8px color-mix(in srgb,var(--accent) 12%,transparent);
 }
+
+/* 급식 화면 잘림 방지 전용 수정 */
+.slide[data-slide="meal"]{
+  align-content:stretch;
+  grid-template-rows:auto auto minmax(0,1fr);
+  padding-top:clamp(48px,6vw,86px);
+  padding-bottom:clamp(34px,4vw,64px);
+}
+.slide[data-slide="meal"] .slide-title{
+  margin:0;
+  font-size:clamp(46px,7vw,104px);
+  line-height:1;
+  position:relative;
+  z-index:4;
+}
+.slide[data-slide="meal"] .meal-meta{
+  margin-top:18px;
+  margin-bottom:0;
+}
+.slide[data-slide="meal"] .big-list{
+  margin-top:22px;
+  max-width:none;
+  min-height:0;
+  overflow:hidden;
+  align-content:start;
+  gap:12px;
+}
+.slide[data-slide="meal"] .big-item{
+  font-size:clamp(18px,2.15vw,36px);
+  line-height:1.24;
+  padding:14px 18px;
+  border-radius:24px;
+  min-width:0;
+}
+.meal-menu-wrap{
+  display:flex;
+  flex-wrap:wrap;
+  gap:8px 18px;
+  line-height:1.28;
+  max-width:100%;
+}
+.meal-menu-wrap span{
+  display:inline-block;
+  white-space:normal;
+}
+
 .meal-meta,.schedule-meta{
   display:flex;flex-wrap:wrap;gap:10px;margin-top:26px
 }
@@ -264,6 +310,16 @@ button{cursor:pointer}
   .status .pill:not(:first-child){display:none}
   .slide-title{font-size:clamp(44px,14vw,86px);letter-spacing:-3px}
   .big-item{font-size:24px}
+  .slide[data-slide="meal"]{
+    padding:42px 22px 38px;
+  }
+  .slide[data-slide="meal"] .slide-title{
+    font-size:clamp(38px,12vw,68px);
+  }
+  .slide[data-slide="meal"] .big-item{
+    font-size:20px;
+    padding:12px 14px;
+  }
 }
 
 /* projector clean mode */
@@ -282,7 +338,7 @@ body.fullscreen-clean .modal-back{display:none!important}
     <section class="slide active" data-slide="event">
       <div class="event-grid">
         <div>
-          
+
           <h1 class="slide-title" id="eventTitle">행사명을 입력하세요</h1>
           <p class="slide-subtitle" id="eventMessage">관리자 설정을 저장하면 빔프로젝터용 화면이 시작됩니다.</p>
         </div>
@@ -293,21 +349,21 @@ body.fullscreen-clean .modal-back{display:none!important}
     </section>
 
     <section class="slide" data-slide="meal">
-      
+
       <h1 class="slide-title" id="mealTitle">오늘의 급식</h1>
       <div class="meal-meta" id="mealMeta"></div>
       <div class="big-list" id="mealList"><div class="big-item">급식 정보를 불러오는 중입니다.</div></div>
     </section>
 
     <section class="slide" data-slide="schedule">
-      
+
       <h1 class="slide-title" id="scheduleTitle">오늘의 학사일정</h1>
       <div class="schedule-meta" id="scheduleMeta"></div>
       <div class="big-list" id="scheduleList"><div class="big-item">학사일정을 불러오는 중입니다.</div></div>
     </section>
 
     <section class="slide" data-slide="clock">
-      
+
       <div class="clock-wrap">
         <div class="clock-time" id="clockTime">00:00</div>
         <div class="clock-date" id="clockDate">-</div>
@@ -520,7 +576,7 @@ async function loadMeal(){
         .map(cleanMenuName)
         .filter(Boolean)
         .slice(0, 8);
-      return `<div class="big-item"><div><div style="color:var(--accent);font-size:.55em;margin-bottom:8px">${escapeHtml(type)}${kcal}</div>${items.map(escapeHtml).join(" · ")}</div></div>`;
+      return `<div class="big-item"><div><div style="color:var(--accent);font-size:.55em;margin-bottom:8px">${escapeHtml(type)}${kcal}</div><div class="meal-menu-wrap">${items.map(item => `<span>${escapeHtml(item)}</span>`).join("")}</div></div></div>`;
     }).join("");
     $("#mealList").innerHTML = html;
   }catch(err){
