@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#140d27"><meta name="description" content="O.Poong Game — 온라인에서 즐기는 O.Poong의 23종 게임과 138개 모드">
+<meta name="theme-color" content="#140d27"><meta name="description" content="O.Poong Game — 온·오프라인에서 즐기는 O.Poong의 23종 게임과 138개 모드">
 <title>O.Poong Game 2.0 — Play More</title>
 <style>
 
@@ -52,9 +52,28 @@ main{min-width:0;flex:1;max-width:1710px;margin:0 auto;padding:33px clamp(18px,3
 .finish-emoji{font-size:50px;margin-bottom:9px}.finish-eyebrow{font-size:10px;font-weight:900;letter-spacing:2px;color:#f3c96d}.finish-card h3{font-size:25px;margin:10px 0 8px}.finish-card p{font-size:12px;color:#e0d3ed;line-height:1.7}
 .finish-record{margin:18px 0;display:flex;gap:8px}.finish-record span{flex:1;background:#241c37;border:1px solid #614a77;border-radius:12px;padding:11px 7px;color:#c2afd8;font-size:10px}.finish-record b{display:block;font-size:21px;color:white;margin-top:4px}.finish-actions{display:flex;justify-content:center;gap:7px;flex-wrap:wrap}
 @keyframes result-in{from{opacity:0;transform:scale(.98)}to{opacity:1;transform:scale(1)}}
+
+/* O.Poong Game 2.1 — safe AdFit placement / offline-ready */
+.ad-dock{display:flex;justify-content:center;align-items:center;min-height:0;min-width:0}
+.ad-card{width:fit-content;max-width:100%;padding:12px;border-radius:19px;border:1px solid #453455;background:#1b142b;box-shadow:0 12px 28px #0002;text-align:center}
+.ad-caption{font-size:10px;font-weight:900;color:#a99cba;letter-spacing:1.2px;text-align:left;margin:0 0 10px}
+.ad-unit{width:320px;height:200px;max-width:100%;overflow:hidden;border-radius:9px;background:#261e36}
+.ad-unit .kakao_ad_area{margin:0 auto}
+.ad-footer{margin-top:9px;color:#9384a8;font-size:10px;line-height:1.45}
+#ad-home-dock{margin:24px 0 30px}
+.game-sidebar .ad-card{padding:8px;border-radius:13px}.game-sidebar .ad-caption{margin-bottom:5px}
+#game-ad-dock{margin-top:18px}
+.game-sidebar{min-width:0}.modal-content{grid-template-columns:minmax(0,1fr) 350px}
+.finish-overlay{overflow-y:auto;align-items:flex-start;overscroll-behavior:contain}
+.finish-card{margin:auto;max-height:none;padding:20px 14px}
+#finish-ad-dock{margin:15px auto 0}
+#finish-ad-dock .ad-card{padding:7px}
+body.is-offline .ad-card{display:none!important}
+@media(max-width:760px){.modal-content{display:flex;flex-direction:column}#game-ad-dock{grid-column:1/-1;margin-top:2px}.finish-overlay{padding:8px}.finish-card{padding:16px 10px}.finish-emoji{font-size:30px;margin:0}.finish-card h3{margin:4px 0;font-size:20px}.finish-record{margin:9px 0}}
+@media(max-width:350px){.ad-card{padding:5px}.ad-unit{transform:scale(.88);transform-origin:top center;margin-bottom:-24px}#finish-ad-dock{max-width:100%}}
 </style>
 </head>
-<body><div id="app"><aside class="sidebar"><div class="brand"><div class="brand-icon">✦</div><div>O.Poong <span style="color:#c8a0ff">Game</span><small>PLAY MORE, EVERY DAY</small></div></div><div class="nav-label">EXPLORE</div><nav id="nav"></nav><div class="nav-bottom"><span>✦ O.POONG ORIGINAL</span><p><b>잠깐 쉬고, 더 즐겁게.</b></p><p>설치 없이 즐기는 미니 게임. 플레이 기록은 이 기기에 저장돼요.</p></div></aside><main><div class="mobile-brand"><div class="brand-icon">✦</div>O.Poong Game</div><header class="topbar"><div><div class="eyebrow">WELCOME TO THE PLAYGROUND</div><h1>오늘은 뭐 하고 놀까? <span style="color:#c6a1ff">✦</span></h1></div><div class="top-right"><label class="search"><span>⌕</span><input id="search" placeholder="게임 이름 검색..." autocomplete="off" aria-label="게임 검색"></label><span id="online-status" class="online-pill">ONLINE</span></div></header><section class="hero"><div class="hero-content"><div class="hero-tag">★ EDITOR'S PICK</div><h2>한 번 시작하면<br><em>멈출 수 없는 퍼즐.</em></h2><p>컬러 블록을 드래그해서 가로·세로 줄을 완성하세요.<br>당신의 최고 점수에 도전!</p><button class="primary" id="featured">지금 플레이하기 <span>→</span></button></div><div class="hero-art" id="hero-art"></div></section><div class="stats"><div class="stat"><div class="stat-icon">▦</div><div><strong id="stat-games">23</strong><span>전체 게임</span></div></div><div class="stat"><div class="stat-icon">✧</div><div><strong id="stat-played">0</strong><span>누적 플레이</span></div></div><div class="stat"><div class="stat-icon">★</div><div><strong id="stat-favs">0</strong><span>즐겨찾기</span></div></div></div><section><div class="section-head"><div><h2 class="section-title" id="section-title">모든 게임</h2><p class="section-sub" id="section-sub">다양한 장르의 미니 게임을 한곳에서 즐겨요.</p></div><span class="count-text" id="game-count"></span></div><div class="filters" id="filters"></div><div class="games-grid" id="games-grid"></div><div class="empty" id="empty" hidden><strong>게임을 찾을 수 없어요.</strong>다른 검색어나 카테고리를 선택해 보세요.</div></section><footer class="foot">© 2026 O.Poong Game · 개인 기록은 브라우저에 저장됩니다. · 인터넷 연결 상태에서 이용해 주세요. · 23종 게임 × 게임별 6개 난이도/규칙 모드</footer></main></div>
+<body><div id="app"><aside class="sidebar"><div class="brand"><div class="brand-icon">✦</div><div>O.Poong <span style="color:#c8a0ff">Game</span><small>PLAY MORE, EVERY DAY</small></div></div><div class="nav-label">EXPLORE</div><nav id="nav"></nav><div class="nav-bottom"><span>✦ O.POONG ORIGINAL</span><p><b>잠깐 쉬고, 더 즐겁게.</b></p><p>설치 없이 즐기는 미니 게임. 플레이 기록은 이 기기에 저장돼요.</p></div></aside><main><div class="mobile-brand"><div class="brand-icon">✦</div>O.Poong Game</div><header class="topbar"><div><div class="eyebrow">WELCOME TO THE PLAYGROUND</div><h1>오늘은 뭐 하고 놀까? <span style="color:#c6a1ff">✦</span></h1></div><div class="top-right"><label class="search"><span>⌕</span><input id="search" placeholder="게임 이름 검색..." autocomplete="off" aria-label="게임 검색"></label><span id="online-status" class="online-pill">ONLINE</span></div></header><section class="hero"><div class="hero-content"><div class="hero-tag">★ EDITOR'S PICK</div><h2>한 번 시작하면<br><em>멈출 수 없는 퍼즐.</em></h2><p>컬러 블록을 드래그해서 가로·세로 줄을 완성하세요.<br>당신의 최고 점수에 도전!</p><button class="primary" id="featured">지금 플레이하기 <span>→</span></button></div><div class="hero-art" id="hero-art"></div></section><div class="stats"><div class="stat"><div class="stat-icon">▦</div><div><strong id="stat-games">23</strong><span>전체 게임</span></div></div><div class="stat"><div class="stat-icon">✧</div><div><strong id="stat-played">0</strong><span>누적 플레이</span></div></div><div class="stat"><div class="stat-icon">★</div><div><strong id="stat-favs">0</strong><span>즐겨찾기</span></div></div></div><div id="ad-home-dock" class="ad-dock" aria-label="광고 영역"><div id="ad-card" class="ad-card"><div class="ad-caption">ADVERTISEMENT · 광고</div><div class="ad-unit"><ins class="kakao_ad_area" style="display:none;" data-ad-unit="DAN-0PFPID8tx8jDkZI8" data-ad-width="320" data-ad-height="200"></ins></div><div class="ad-footer">이 광고는 인터넷 연결 중에만 표시됩니다.</div></div></div><section><div class="section-head"><div><h2 class="section-title" id="section-title">모든 게임</h2><p class="section-sub" id="section-sub">다양한 장르의 미니 게임을 한곳에서 즐겨요.</p></div><span class="count-text" id="game-count"></span></div><div class="filters" id="filters"></div><div class="games-grid" id="games-grid"></div><div class="empty" id="empty" hidden><strong>게임을 찾을 수 없어요.</strong>다른 검색어나 카테고리를 선택해 보세요.</div></section><footer class="foot">© 2026 O.Poong Game · 개인 기록은 브라우저에 저장됩니다. · 한 번 방문하면 오프라인 플레이 가능 · 광고는 온라인에서만 표시 · 23종 게임 × 게임별 6개 난이도/규칙 모드</footer></main></div>
 <div id="modal-root"></div><div id="offline-root"></div>
 <script>
 'use strict';
@@ -111,7 +130,25 @@ function render(){
  let grid=$('#games-grid');grid.innerHTML='';shown.forEach(g=>{let card=el('div','game-card');let thumb=el('button','card-thumb');thumb.style.background=g.bg;thumb.setAttribute('aria-label',g.label+' 모드 선택');thumb.append(renderMini(g,0));thumb.onclick=()=>openGame(byFamily(g,0));let favorite=favIds.has(g.id);let fav=el('button','fav'+(favorite?' on':''),favorite?'★':'☆');fav.setAttribute('aria-label',g.label+' 즐겨찾기');fav.onclick=()=>{data.favorites= favorite?data.favorites.filter(v=>v.split('-')[0]!==g.id):[...data.favorites,g.id];save();render()};card.append(thumb,fav,el('span','card-title',g.label),el('span','card-desc',g.cat+' · '+g.desc));grid.append(card)});
 }
 
-function updateOnline(){let online=navigator.onLine;$('#online-status').className='online-pill'+(online?'':' offline');$('#online-status').textContent=online?'ONLINE':'OFFLINE';let root=$('#offline-root');if(!online){root.innerHTML='<div class="offline-overlay"><div class="offline-panel"><div style="font-size:48px">⌁</div><h2>인터넷 연결이 필요해요</h2><p>O.Poong Game은 온라인 전용 서비스예요.<br>인터넷에 연결한 후 다시 시도해 주세요.</p><button class="primary" onclick="location.reload()">새로고침 ↗</button></div></div>'}else root.innerHTML=''};
+let adSdkLoaded=false;
+function moveAd(dock){const card=$('#ad-card');if(card&&dock&&card.parentElement!==dock)dock.appendChild(card)}
+function loadAdSdk(){
+ if(adSdkLoaded||!navigator.onLine||!$('#ad-card'))return;
+ adSdkLoaded=true;
+ // The issued ins attributes are left unchanged. Do not reload the SDK on game transitions.
+ const script=document.createElement('script');script.async=true;script.type='text/javascript';
+ script.src='https://t1.kakaocdn.net/kas/static/ba.min.js';
+ script.onerror=()=>{console.info('AdFit unavailable; gameplay remains available.')};
+ document.body.appendChild(script);
+}
+function updateOnline(){
+ const online=navigator.onLine;
+ $('#online-status').className='online-pill'+(online?'':' offline');
+ $('#online-status').textContent=online?'ONLINE':'OFFLINE · 플레이 가능';
+ document.body.classList.toggle('is-offline',!online);
+ $('#offline-root').innerHTML='';
+ if(online)loadAdSdk();
+}
 window.addEventListener('online',updateOnline);window.addEventListener('offline',updateOnline);
 $('#search').addEventListener('input',e=>{search=e.target.value.toLowerCase().trim();render()});$('#featured').onclick=()=>openGame(byFamily(families.find(f=>f.id==='blocks')));$('#hero-art').append(renderMini(families.find(f=>f.id==='blocks'),0));
 let gameState=null,cleanup=[],done=false,score=0,moves=0,gameNotice='';
@@ -125,20 +162,20 @@ function finish(win,msg){
  setNotice((win?'🎉 ':'')+msg);let best=$('#best-val');if(best)best.textContent=data.best[active.gid]??'—';
  const body=gameBody();if(!body)return;
  let panel=el('div','finish-overlay');panel.setAttribute('role','status');
- panel.innerHTML=`<div class="finish-card"><div class="finish-emoji">${win?'🏆':'🎮'}</div><span class="finish-eyebrow">${win?'STAGE CLEAR':'GAME OVER'}</span><h3>${win?'잘했어요!':'다시 도전해 볼까요?'}</h3><p>${ESC(msg)}</p><div class="finish-record"><span>이번 점수 <b>${score}</b></span><span>최고 기록 <b>${data.best[active.gid]??'—'}</b></span></div><div class="finish-actions"><button class="primary" id="finish-retry">↻ 다시 시작</button><button class="secondary" id="finish-next">다음 모드 →</button></div></div>`;
- body.append(panel);$('#finish-retry').onclick=()=>startMode(active.index-1);$('#finish-next').onclick=()=>startMode(active.index%families.find(f=>f.id===active.id).modes.length)
+ panel.innerHTML=`<div class="finish-card"><div class="finish-emoji">${win?'🏆':'🎮'}</div><span class="finish-eyebrow">${win?'STAGE CLEAR':'GAME OVER'}</span><h3>${win?'잘했어요!':'다시 도전해 볼까요?'}</h3><p>${ESC(msg)}</p><div class="finish-record"><span>이번 점수 <b>${score}</b></span><span>최고 기록 <b>${data.best[active.gid]??'—'}</b></span></div><div class="finish-actions"><button class="primary" id="finish-retry">↻ 다시 시작</button><button class="secondary" id="finish-next">다음 모드 →</button></div><div id="finish-ad-dock" class="ad-dock" aria-label="광고 영역"></div></div>`;
+ body.append(panel);moveAd($('#finish-ad-dock'));$('#finish-retry').onclick=()=>startMode(active.index-1);$('#finish-next').onclick=()=>startMode(active.index%families.find(f=>f.id===active.id).modes.length)
 }
 function openGame(g){
- if(!navigator.onLine){updateOnline();return}closeGame();active=g;
+ closeGame();active=g;
  const f=families.find(x=>x.id===g.id),root=$('#modal-root');
- root.innerHTML=`<div class="modal-back" id="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-label="${ESC(f.label)}"><header class="modal-head"><div class="modal-heading"><small>${ESC(f.cat)} · O.POONG GAME</small><h2>${ESC(f.label)}</h2></div><button class="close" id="close-game" aria-label="닫기">✕</button></header><div class="mode-picker"><div class="mode-title"><b>게임 모드 선택</b><span>모드를 바꾸면 새로운 게임이 시작돼요</span></div><div class="mode-list" id="mode-list" role="group" aria-label="게임 모드"></div></div><div class="modal-content"><div class="game-container" id="game-body"></div><aside class="game-sidebar"><h3>게임 방법</h3><p>${ESC(f.guide)}</p><div class="info-box"><label id="score-label">점수 / 진행도</label><b id="score-val">0</b></div><div class="info-box"><label>선택한 모드 최고 기록</label><b id="best-val">—</b></div><div class="game-action"><button class="primary" id="restart-game">↻ 다시 시작</button><button class="secondary" id="close-game2">게임 목록</button></div></aside></div></div></div>`;
+ root.innerHTML=`<div class="modal-back" id="modal-back"><div class="modal" role="dialog" aria-modal="true" aria-label="${ESC(f.label)}"><header class="modal-head"><div class="modal-heading"><small>${ESC(f.cat)} · O.POONG GAME</small><h2>${ESC(f.label)}</h2></div><button class="close" id="close-game" aria-label="닫기">✕</button></header><div class="mode-picker"><div class="mode-title"><b>게임 모드 선택</b><span>모드를 바꾸면 새로운 게임이 시작돼요</span></div><div class="mode-list" id="mode-list" role="group" aria-label="게임 모드"></div></div><div class="modal-content"><div class="game-container" id="game-body"></div><aside class="game-sidebar"><h3>게임 방법</h3><p>${ESC(f.guide)}</p><div class="info-box"><label id="score-label">점수 / 진행도</label><b id="score-val">0</b></div><div class="info-box"><label>선택한 모드 최고 기록</label><b id="best-val">—</b></div><div class="game-action"><button class="primary" id="restart-game">↻ 다시 시작</button><button class="secondary" id="close-game2">게임 목록</button></div><div id="game-ad-dock" class="ad-dock" aria-label="광고 영역"></div></aside></div></div></div>`;
  $('#close-game').onclick=closeGame;$('#close-game2').onclick=closeGame;$('#restart-game').onclick=()=>startMode(active.index-1);
  $('#modal-back').addEventListener('mousedown',e=>{if(e.target.id==='modal-back')closeGame()});
- document.body.style.overflow='hidden';startMode(g.index-1);render();
+ document.body.style.overflow='hidden';moveAd($('#game-ad-dock'));startMode(g.index-1);render();
 }
 function startMode(i){
  if(!active)return;const f=families.find(x=>x.id===active.id);if(i<0||i>=f.modes.length)return;
- stopAll();active=byFamily(f,i);done=false;score=0;moves=0;gameNotice='';gameState=null;
+ stopAll();moveAd($('#game-ad-dock'));active=byFamily(f,i);done=false;score=0;moves=0;gameNotice='';gameState=null;
  data.plays++;data.recent=[active.gid,...data.recent.filter(x=>x!==active.gid)].slice(0,60);save();
  const list=$('#mode-list');list.innerHTML='';f.modes.forEach((m,j)=>{const btn=el('button','mode-option'+(j===i?' selected':''));btn.textContent=m[0];btn.setAttribute('aria-pressed',String(j===i));btn.onclick=()=>{if(j!==i)startMode(j)};list.append(btn)});
  const body=$('#game-body');body.innerHTML='';setScore(0,'점수 / 진행도');$('#best-val').textContent=data.best[active.gid]??'—';
@@ -146,7 +183,7 @@ function startMode(i){
  render();
 }
 
-function closeGame(){stopAll();active=null;$('#modal-root').innerHTML='';document.body.style.overflow=''}
+function closeGame(){stopAll();moveAd($('#ad-home-dock'));active=null;$('#modal-root').innerHTML='';document.body.style.overflow=''}
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&active)closeGame()});
 function board(n,addClass=''){let b=el('div','board '+addClass);b.style.gridTemplateColumns=`repeat(${n},minmax(0,1fr))`;return b}
 function cell(txt='',cls=''){let c=el('button','cell '+cls,txt);c.type='button';return c}
@@ -446,4 +483,9 @@ engines.sort=([title,colors,shuffleCount])=>{
 };
 
 makeNav();render();updateOnline();
+// First online visit populates the same-origin offline app shell cache.
+if('serviceWorker' in navigator && location.protocol.startsWith('http')){
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js',{scope:'./'}).catch(e=>console.info('Offline cache unavailable:',e)));
+}
+
 </script></body></html>
