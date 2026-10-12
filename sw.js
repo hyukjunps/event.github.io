@@ -1,5 +1,5 @@
 /* O.Poong Game 2.1 — offline app shell. Do not intercept/cache third-party ads. */
-const CACHE='opoong-game-shell-2.1.1-sudoku';
+const CACHE='opoong-game-shell-2.1.2-board-games';
 const SHELL=['./','./index.html','./sw.js'];
 self.addEventListener('install',event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
