@@ -249,7 +249,7 @@ const families=[
  {id:'memory',label:'메모리 카드',cat:'두뇌',emoji:'🃏',bg:'#a23e70',color:'#ffbdca',desc:'같은 그림 두 장 찾기',guide:'카드 두 장을 뒤집어 같은 그림인지 확인하세요. 모든 짝을 찾으면 승리예요.',modes:[['6쌍',6,0],['8쌍',8,0],['10쌍',10,0],['12쌍',12,0],['15쌍',15,0],['18쌍',18,0]]},
  {id:'lights',label:'라이트 아웃',cat:'두뇌',emoji:'💡',bg:'#d49a24',color:'#fff09e',desc:'모든 전구를 끄세요',guide:'칸을 누르면 자기 자신과 상하좌우의 불이 뒤집혀요. 모든 전구를 끄면 클리어예요.',modes:[['3×3 입문',3,5],['4×4 입문',4,7],['4×4 도전',4,12],['5×5 일반',5,10],['5×5 어려움',5,20],['6×6 마스터',6,24]]},
  {id:'maze',label:'미로 탈출',cat:'퍼즐',emoji:'🌀',bg:'#328cbb',color:'#b8e7ff',desc:'출구까지 최단 길 찾기',guide:'방향키 또는 화면의 화살표로 미로를 이동해 오른쪽 아래 출구에 도착하세요.',modes:[['작은 미로',7,0],['초급 미로',9,0],['중급 미로',11,0],['큰 미로',13,0],['복잡한 미로',15,0],['극한 미로',17,0]]},
- {id:'tictac',label:'틱택토',cat:'전략',emoji:'⭕',bg:'#a54d8e',color:'#ffcced',desc:'상대보다 먼저 연속 완성',guide:'당신은 X, 컴퓨터는 O예요. 가로·세로·대각선으로 목표 개수만큼 연속으로 놓으세요.',modes:[['3×3 클래식',3,3],['4×4 스피드',4,3],['4×4 클래식',4,4],['5×5 스피드',5,3],['5×5 전략',5,4],['6×6 마스터',6,4]]},
+ {id:'tictac',label:'틱택토',cat:'전략',emoji:'⭕',bg:'#a54d8e',color:'#ffcced',desc:'3×3 · 기본과 말 옮기기',guide:'기본 또는 말 옮기기 모드를 고르고, 컴퓨터 대전이나 같은 화면에서 친구와 2인 대전을 선택하세요. 가로·세로·대각선으로 3개를 만들면 승리!',modes:[['3×3 기본','normal'],['3×3 말 옮기기','move']]},
  {id:'connect',label:'커넥트 포',cat:'전략',emoji:'🔴',bg:'#27649d',color:'#ff8172',desc:'디스크를 연결해 승리',guide:'열을 눌러 디스크를 떨어뜨리세요. 상대보다 먼저 정해진 개수를 연속으로 이으면 승리예요.',modes:[['미니 3목',5,3],['표준 4목',7,4],['와이드 4목',8,4],['콤팩트 4목',6,4],['빅 5목',9,5],['마스터 5목',10,5]]},
  {id:'reversi',label:'리버시',cat:'전략',emoji:'⚫',bg:'#31917b',color:'#b0fbd4',desc:'상대 돌을 뒤집어 차지',guide:'흰 돌이 당신이에요. 상대 돌을 직선으로 둘러싸면 그 사이의 돌이 당신 색으로 바뀌어요.',modes:[['미니 4×4',4,0],['클래식 6×6',6,0],['표준 8×8',8,0],['하드 6×6',6,1],['하드 8×8',8,1],['빅 10×10',10,0]]},
  {id:'flood',label:'컬러 플러드',cat:'퍼즐',emoji:'🌈',bg:'#8b54bb',color:'#ffbdd5',desc:'같은 색으로 보드 채우기',guide:'아래 색을 눌러 왼쪽 위의 영역을 확장하세요. 제한 횟수 안에 전체 보드를 한 색으로 만들어요.',modes:[['4색 입문',8,4],['5색 입문',8,5],['6색 일반',9,6],['4색 큰 판',11,4],['5색 도전',11,5],['6색 마스터',12,6]]},
@@ -594,12 +594,69 @@ engines.maze=([title,n])=>{
  listen(document,'keydown',e=>{if(!active?.gid.startsWith('maze'))return;let dir={ArrowUp:[0,-1],ArrowDown:[0,1],ArrowLeft:[-1,0],ArrowRight:[1,0]}[e.key];if(dir){e.preventDefault();go(...dir)}});paint();hint('노란 ● → 초록 ★까지 이동');setScore(0,'걸음 수');
 };
 // 10 / TIC-TAC-TOE vs COMPUTER
-engines.tictac=([title,n,k])=>{
- let a=Array(n*n).fill(0),b=board(n);b.style.maxWidth='380px';gameBody().append(b);showNotice();let lines=[];for(let y=0;y<n;y++)for(let x=0;x<n;x++)for(let [dx,dy] of [[1,0],[0,1],[1,1],[1,-1]]){let eY=y+(k-1)*dy,eX=x+(k-1)*dx;if(eY>=0&&eY<n&&eX>=0&&eX<n)lines.push(Array.from({length:k},(_,i)=>(y+i*dy)*n+x+i*dx))}
- const wins=v=>lines.some(line=>line.every(i=>a[i]===v));function paint(){b.innerHTML='';a.forEach((v,i)=>{let c=cell(v===1?'✕':v===2?'◯':'');c.style.background='#39304d';c.style.fontSize=n<=4?'40px':'26px';c.style.color=v===1?'#ffc75c':'#9deadd';c.onclick=()=>turn(i);b.append(c)})}
- function end(){if(wins(1)){setScore(100,'획득 점수');finish(true,'당신의 승리!');return true}if(wins(2)){finish(false,'컴퓨터가 승리했어요.');return true}if(a.every(Boolean)){setScore(30,'획득 점수');finish(false,'무승부예요!');return true}return false}
- let waiting=false;function immediate(v){for(let i=0;i<a.length;i++)if(!a[i]){a[i]=v;let win=wins(v);a[i]=0;if(win)return i}return -1}
- function turn(i){if(done||waiting||a[i])return;a[i]=1;paint();if(end())return;waiting=true;timeout(()=>{if(done)return;let choice=immediate(2);if(choice<0)choice=immediate(1);if(choice<0){let empty=a.map((x,i)=>x?-1:i).filter(i=>i>=0);empty.sort((i,j)=>{let center=(n-1)/2,di=Math.abs(i%n-center)+Math.abs(Math.floor(i/n)-center)+Math.random()*2,dj=Math.abs(j%n-center)+Math.abs(Math.floor(j/n)-center)+Math.random()*2;return di-dj});choice=empty[0]}a[choice]=2;waiting=false;paint();end()},260)}paint();hint('당신 = ✕ / 컴퓨터 = ◯');setScore(0,'획득 점수');
+engines.tictac=([title,mode])=>{
+ const shifting=mode==='move',lines=[[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
+ let a=Array(9).fill(0),current=1,selected=-1,waiting=false,opponent='computer',turns=0,repeated=new Map();
+ const controls=el('div','controls'),computer=el('button','secondary','컴퓨터 대전'),friend=el('button','secondary','친구와 2인 대전');
+ controls.append(computer,friend);gameBody().append(controls);
+ const b=board(3);b.style.maxWidth='380px';gameBody().append(b);showNotice();
+ const wins=p=>lines.some(line=>line.every(i=>a[i]===p)),count=p=>a.filter(v=>v===p).length;
+ function actions(p){
+  const empty=a.map((v,i)=>v?-1:i).filter(i=>i>=0);
+  if(!shifting||count(p)<3)return empty.map(to=>({from:-1,to}));
+  return a.flatMap((v,from)=>v===p?empty.map(to=>({from,to})):[]);
+ }
+ function apply(action,p){if(action.from>=0)a[action.from]=0;a[action.to]=p}
+ function undo(action,p){a[action.to]=0;if(action.from>=0)a[action.from]=p}
+ function notice(){setNotice(waiting?'컴퓨터 생각 중…':(opponent==='friend'?(current===1?'X 친구':'O 친구'):'내')+' 차례 · '+(shifting&&count(current)>=3?(selected<0?'옮길 내 말을 선택하세요.':'옮길 빈 칸을 선택하세요.'):'빈 칸에 말을 놓으세요.'))}
+ function paint(){
+  computer.disabled=friend.disabled=turns>0||waiting||done;
+  computer.setAttribute('aria-pressed',String(opponent==='computer'));friend.setAttribute('aria-pressed',String(opponent==='friend'));
+  b.innerHTML='';a.forEach((v,i)=>{
+   const c=cell(v===1?'✕':v===2?'◯':'');c.style.background=selected===i?'#795aa3':'#39304d';c.style.fontSize='40px';c.style.color=v===1?'#ffc75c':'#9deadd';
+   c.disabled=done||waiting||(v!==0&&(!shifting||count(current)<3||v!==current));
+   c.setAttribute('aria-label',(i+1)+'번 칸 '+(v===1?'X':v===2?'O':'빈 칸')+(selected===i?' 선택됨':''));
+   c.onclick=()=>turn(i);b.append(c);
+  });
+ }
+ function finishTurn(p){
+  turns++;selected=-1;
+  if(wins(p)){setScore(opponent==='friend'||p===1?100:0,'획득 점수');finish(opponent==='friend'||p===1,opponent==='friend'?(p===1?'X':'O')+' 친구의 승리!':p===1?'당신의 승리!':'컴퓨터가 승리했어요.');paint();return}
+  if(!shifting&&a.every(Boolean)){setScore(30,'획득 점수');finish(false,'무승부예요!');paint();return}
+  current=3-p;
+  const key=a.join('')+':'+current,times=(repeated.get(key)||0)+1;repeated.set(key,times);
+  if(shifting&&(times>=3||turns>=100)){setScore(30,'획득 점수');finish(false,times>=3?'같은 배치와 차례가 3번 반복되어 무승부예요.':'100턴을 진행해 무승부예요.');paint();return}
+  if(opponent==='computer'&&current===2){waiting=true;paint();notice();timeout(computerTurn,300)}
+  else{waiting=false;paint();notice()}
+ }
+ function computerTurn(){
+  if(done)return;
+  const available=actions(2);let best=null,bestScore=-Infinity;
+  for(const action of available){
+   apply(action,2);let value=0;
+   if(wins(2))value=10000;
+   else{
+    let threats=0;for(const reply of actions(1)){apply(reply,1);if(wins(1))threats++;undo(reply,1)}
+    value=-1000*threats+(action.to===4?6:[0,2,6,8].includes(action.to)?3:0)+Math.random();
+   }
+   undo(action,2);if(value>bestScore){bestScore=value;best=action}
+  }
+  if(!best){waiting=false;finish(false,'둘 수 있는 칸이 없어 무승부예요.');paint();return}
+  apply(best,2);waiting=false;finishTurn(2);
+ }
+ function turn(i){
+  if(done||waiting)return;
+  if(shifting&&count(current)>=3){
+   if(a[i]===current){selected=selected===i?-1:i;paint();notice();return}
+   if(a[i]||selected<0)return;apply({from:selected,to:i},current);
+  }else{if(a[i])return;a[i]=current}
+  finishTurn(current);
+ }
+ function choose(value){if(done||turns||waiting)return;opponent=value;selected=-1;paint();notice()}
+ computer.onclick=()=>choose('computer');friend.onclick=()=>choose('friend');
+ repeated.set(a.join('')+':1',1);paint();notice();
+ hint(shifting?'3×3 · 각자 말 3개를 놓은 뒤, 자기 말 하나를 선택해 아무 빈 칸으로 옮기세요. 3개를 한 줄로 만들면 승리!':'3×3 · 빈 칸에 번갈아 놓고, 가로·세로·대각선으로 3개를 만들면 승리!');
+ setScore(0,'획득 점수');
 };
 // 11 / CONNECT FOUR vs COMPUTER
 engines.connect=([title,cols,k])=>{
@@ -661,14 +718,14 @@ engines.odd=([title,total,diff])=>{
 // 18 / TOWER OF HANOI
 // HANOI 2.0 — drag between towers, tap fallback, live valid-target highlight.
 engines.hanoi=([title,n])=>{
- let stacks=[Array.from({length:n},(_,i)=>n-i),[],[]],selected=-1,dragFrom=-1,dragStart=null,towers=el('div','hanoi-towers');
+ let stacks=[Array.from({length:n},(_,i)=>n-i),[],[]],selected=-1,dragFrom=-1,dragStart=null,suppressClick=false,clickTimer=null,towers=el('div','hanoi-towers');
  gameBody().append(towers);showNotice();hint('원판을 다른 기둥으로 끌어서 놓으세요. 기둥을 차례로 눌러도 돼요. · 최소 '+(2**n-1)+'회');
- function move(from,to){if(done||from===to||from<0||to<0||!stacks[from].length)return false;let top=stacks[from].at(-1);if(stacks[to].length&&stacks[to].at(-1)<top){setNotice('큰 원판을 작은 원판 위에 놓을 수 없어요.');return false}stacks[to].push(stacks[from].pop());moves++;setScore(moves,'이동 횟수');setNotice('잘했어요! 계속 옮겨 주세요.');if(stacks[2].length===n)finish(true,`${moves}번 만에 모든 원판을 옮겼어요!`);return true}
- function tap(i){if(done)return;if(selected<0){if(stacks[i].length)selected=i;paint();return}if(selected===i){selected=-1;paint();return}const from=selected;selected=-1;move(from,i);paint()}
- function paint(){towers.innerHTML='';stacks.forEach((st,i)=>{let col=el('button','hanoi-col'+(selected===i?' sel':''));col.dataset.tower=i;col.setAttribute('aria-label',(i+1)+'번 기둥, '+st.length+'개 원판');st.forEach((s,j)=>{let disk=el('div','disk');disk.style.width=(27+s*68/n)+'%';disk.style.background=COLORS[(s+1)%COLORS.length];if(j===st.length-1)disk.dataset.top='1';col.append(disk)});col.onclick=()=>tap(i);col.onpointerdown=e=>{if(e.button!==0||!stacks[i].length)return;dragStart={id:e.pointerId,from:i,x:e.clientX,y:e.clientY}};towers.append(col)})}
- listen(document,'pointermove',e=>{if(!dragStart||dragStart.id!==e.pointerId)return;let r=towers.getBoundingClientRect();if(Math.hypot(e.clientX-dragStart.x,e.clientY-dragStart.y)<9)return;dragFrom=dragStart.from;$$('.hanoi-col',towers).forEach(c=>c.classList.remove('drag-target'));const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.hanoi-col');if(hit&&towers.contains(hit))hit.classList.add('drag-target')});
- listen(document,'pointerup',e=>{if(!dragStart||dragStart.id!==e.pointerId)return;const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.hanoi-col'),to=hit&&towers.contains(hit)?Number(hit.dataset.tower):-1;if(dragFrom>=0&&to>=0){selected=-1;move(dragStart.from,to);paint()}dragFrom=-1;dragStart=null});
- listen(document,'pointercancel',()=>{dragFrom=-1;dragStart=null;paint()});paint();setScore(0,'이동 횟수');
+ function move(from,to){if(done||from===to||from<0||to<0||from>2||to>2||!stacks[from].length)return false;let top=stacks[from].at(-1);if(stacks[to].length&&stacks[to].at(-1)<top){setNotice('큰 원판을 작은 원판 위에 놓을 수 없어요.');return false}stacks[to].push(stacks[from].pop());moves++;setScore(moves,'이동 횟수');setNotice('잘했어요! 계속 옮겨 주세요.');if(stacks[2].length===n)finish(true,`${moves}번 만에 모든 원판을 옮겼어요!`);return true}
+ function tap(i){if(done||suppressClick)return;if(selected<0){if(stacks[i].length)selected=i;paint();return}if(selected===i){selected=-1;paint();return}const from=selected;selected=-1;move(from,i);paint()}
+ function paint(){towers.innerHTML='';stacks.forEach((st,i)=>{let col=el('button','hanoi-col'+(selected===i?' sel':''));col.dataset.tower=i;col.setAttribute('aria-label',(i+1)+'번 기둥, '+st.length+'개 원판');st.forEach((s,j)=>{let disk=el('div','disk');disk.style.width=(27+s*68/n)+'%';disk.style.background=COLORS[(s+1)%COLORS.length];if(j===st.length-1)disk.dataset.top='1';col.append(disk)});col.onclick=()=>tap(i);col.onpointerdown=e=>{if(done||e.button!==0||!stacks[i].length)return;dragStart={id:e.pointerId,from:i,x:e.clientX,y:e.clientY}};towers.append(col)})}
+ listen(document,'pointermove',e=>{if(!dragStart||dragStart.id!==e.pointerId)return;if(Math.hypot(e.clientX-dragStart.x,e.clientY-dragStart.y)<9)return;dragFrom=dragStart.from;$('.hanoi-col',towers).forEach(c=>c.classList.remove('drag-target'));const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.hanoi-col');if(hit&&towers.contains(hit)){const to=Number(hit.dataset.tower),top=stacks[dragFrom].at(-1);if(to!==dragFrom&&(!stacks[to].length||stacks[to].at(-1)>top))hit.classList.add('drag-target')}});
+ listen(document,'pointerup',e=>{if(!dragStart||dragStart.id!==e.pointerId)return;const hit=document.elementFromPoint(e.clientX,e.clientY)?.closest('.hanoi-col'),to=hit&&towers.contains(hit)?Number(hit.dataset.tower):-1;if(dragFrom>=0){suppressClick=true;clearTimeout(clickTimer);clickTimer=setTimeout(()=>{suppressClick=false},250);selected=-1;if(to>=0)move(dragStart.from,to);paint()}dragFrom=-1;dragStart=null});
+ listen(document,'pointercancel',e=>{if(dragStart&&dragStart.id===e.pointerId){dragFrom=-1;dragStart=null;paint()}});cleanup.push(()=>clearTimeout(clickTimer));paint();setScore(0,'이동 횟수');
 };
 
 // 19 / NUMBER TAP
