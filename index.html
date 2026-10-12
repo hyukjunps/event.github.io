@@ -450,13 +450,116 @@ engines.mines=([title,n,mineTotal])=>{
  paint();setScore(0,'안전한 칸');
 };
 
-// 05 / SUDOKU — valid transformed base grid
+// 05 / SUDOKU — rule-checked grids and uniquely solvable puzzles
+function sudokuValid(a,n){
+ const q=Math.sqrt(n);
+ if(!Number.isInteger(q)||a.length!==n*n||a.some(v=>!Number.isInteger(v)||v<1||v>n))return false;
+ for(let i=0;i<n;i++){
+  if(new Set(a.slice(i*n,(i+1)*n)).size!==n)return false;
+  if(new Set(Array.from({length:n},(_,j)=>a[j*n+i])).size!==n)return false;
+ }
+ for(let r=0;r<n;r+=q)for(let c=0;c<n;c+=q){
+  let vals=[];for(let y=0;y<q;y++)for(let x=0;x<q;x++)vals.push(a[(r+y)*n+c+x]);
+  if(new Set(vals).size!==n)return false;
+ }
+ return true;
+}
+function sudokuConflicts(a,n){
+ const q=Math.sqrt(n),bad=new Set(),groups=[];
+ for(let i=0;i<n;i++){
+  groups.push(Array.from({length:n},(_,j)=>i*n+j));
+  groups.push(Array.from({length:n},(_,j)=>j*n+i));
+ }
+ for(let r=0;r<n;r+=q)for(let c=0;c<n;c+=q){
+  let group=[];for(let y=0;y<q;y++)for(let x=0;x<q;x++)group.push((r+y)*n+c+x);groups.push(group);
+ }
+ groups.forEach(group=>{
+  const seen=new Map();
+  group.forEach(i=>{const v=a[i];if(!v)return;if(!Number.isInteger(v)||v<1||v>n){bad.add(i);return}
+   if(seen.has(v)){bad.add(i);bad.add(seen.get(v))}else seen.set(v,i);
+  });
+ });
+ return bad;
+}
+function sudokuSolutionCount(puzzle,n,limit=2){
+ const q=Math.sqrt(n),a=[...puzzle],rows=Array(n).fill(0),cols=Array(n).fill(0),boxes=Array(n).fill(0),all=(1<<n)-1;
+ for(let i=0;i<a.length;i++)if(a[i]){
+  const r=Math.floor(i/n),c=i%n,b=Math.floor(r/q)*q+Math.floor(c/q),bit=1<<(a[i]-1);
+  if(!Number.isInteger(a[i])||a[i]<1||a[i]>n||(rows[r]|cols[c]|boxes[b])&bit)return 0;
+  rows[r]|=bit;cols[c]|=bit;boxes[b]|=bit;
+ }
+ let count=0;
+ function visit(){
+  if(count>=limit)return;
+  let chosen=-1,mask=0,best=n+1;
+  for(let i=0;i<a.length;i++)if(!a[i]){
+   const r=Math.floor(i/n),c=i%n,b=Math.floor(r/q)*q+Math.floor(c/q),m=all&~(rows[r]|cols[c]|boxes[b]);
+   if(!m)return;let k=0;for(let bits=m;bits;bits&=bits-1)k++;
+   if(k<best){best=k;chosen=i;mask=m;if(k===1)break}
+  }
+  if(chosen<0){count++;return}
+  const r=Math.floor(chosen/n),c=chosen%n,b=Math.floor(r/q)*q+Math.floor(c/q);
+  while(mask&&count<limit){
+   const bit=mask&-mask;mask^=bit;a[chosen]=Math.log2(bit)+1;rows[r]|=bit;cols[c]|=bit;boxes[b]|=bit;
+   visit();rows[r]^=bit;cols[c]^=bit;boxes[b]^=bit;a[chosen]=0;
+  }
+ }
+ visit();return count;
+}
+function sudokuPuzzle(n,holes){
+ const q=Math.sqrt(n),base=Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>(r*q+Math.floor(r/q)+c)%n+1));
+ let best=null;
+ for(let attempt=0;attempt<8;attempt++){
+  const rows=shuffle(Array.from({length:q},(_,i)=>i)).flatMap(b=>shuffle(Array.from({length:q},(_,i)=>b*q+i)));
+  const cols=shuffle(Array.from({length:q},(_,i)=>i)).flatMap(b=>shuffle(Array.from({length:q},(_,i)=>b*q+i)));
+  const labels=shuffle(Array.from({length:n},(_,i)=>i+1)),solution=rows.flatMap(r=>cols.map(c=>labels[base[r][c]-1]));
+  if(!sudokuValid(solution,n))throw new Error('Invalid Sudoku grid');
+  const puzzle=[...solution];let removed=0;
+  for(const i of shuffle(Array.from({length:n*n},(_,i)=>i))){
+   if(removed>=holes)break;const value=puzzle[i];puzzle[i]=0;
+   if(sudokuSolutionCount(puzzle,n)===1)removed++;else puzzle[i]=value;
+  }
+  if(!best||removed>best.removed)best={solution,puzzle,removed};
+  if(removed>=holes)break;
+ }
+ return best;
+}
 engines.sudoku=([title,n,holes])=>{
- let q=Math.sqrt(n)|0,base=Array.from({length:n},(_,r)=>Array.from({length:n},(_,c)=>((r*q+Math.floor(r/q)+c)%n)+1));let bands=shuffle(Array.from({length:q},(_,i)=>i));let rowOrder=bands.flatMap(b=>shuffle(Array.from({length:q},(_,i)=>b*q+i)));let stacks=shuffle(Array.from({length:q},(_,i)=>i));let colOrder=stacks.flatMap(s=>shuffle(Array.from({length:q},(_,i)=>s*q+i)));let labels=shuffle(Array.from({length:n},(_,i)=>i+1));let solution=rowOrder.map(r=>colOrder.map(c=>labels[base[r][c]-1])).flat();let a=[...solution],fixed=Array(n*n).fill(true),selected=-1;shuffle(Array.from({length:n*n},(_,i)=>i)).slice(0,holes).forEach(i=>{a[i]=0;fixed[i]=false});let b=board(n,'small-board');b.style.maxWidth='415px';b.style.gap=n===9?'1px':'4px';gameBody().append(b);let keys=el('div','controls');for(let i=1;i<=n;i++){let x=el('button','arrowbtn',String(i));x.onclick=()=>fill(i);keys.append(x)}let clear=el('button','secondary','지우기');clear.onclick=()=>fill(0);keys.append(clear);gameBody().append(keys);showNotice();
- function valid(){for(let i=0;i<n;i++){let row=Array.from({length:n},(_,j)=>a[i*n+j]),col=Array.from({length:n},(_,j)=>a[j*n+i]);if(new Set(row).size<n||new Set(col).size<n)return false}for(let r=0;r<n;r+=q)for(let c=0;c<n;c+=q){let vals=[];for(let y=0;y<q;y++)for(let x=0;x<q;x++)vals.push(a[(r+y)*n+c+x]);if(new Set(vals).size<n)return false}return true}
- function fill(v){if(selected<0||fixed[selected]||done)return;a[selected]=v;paint();setScore(a.filter((v,i)=>v&&!fixed[i]).length,'채운 칸');if(a.every(Boolean)&&valid())finish(true,'스도쿠를 완성했어요!');else if(a.every(Boolean))setNotice('중복된 숫자가 있어요. 다시 확인하세요.')}
- function paint(){b.innerHTML='';a.forEach((v,i)=>{let r=Math.floor(i/n),c0=i%n,x=cell(v?String(v):'');x.style.background=selected===i?'#795aa3':fixed[i]?'#3f3355':'#615277';x.style.color=fixed[i]?'#ddd4f1':'#fff2b6';x.style.fontSize=n===9?'clamp(12px,3vw,19px)':'25px';x.style.borderRight=(c0+1)%q===0&&c0<n-1?'3px solid #c5a0e7':'0';x.style.borderBottom=(r+1)%q===0&&r<n-1?'3px solid #c5a0e7':'0';x.onclick=()=>{selected=i;paint()};b.append(x)})}
- listen(document,'keydown',e=>{if(!active?.gid.startsWith('sudoku')||e.target.tagName==='INPUT')return;let v=Number(e.key);if((v>=1&&v<=n)||e.key==='Backspace'||e.key==='Delete')fill(v||0)});paint();hint('빈 칸을 누른 후 숫자를 선택하세요.');setScore(0,'채운 칸');
+ const q=Math.sqrt(n),generated=sudokuPuzzle(n,holes),a=[...generated.puzzle],fixed=a.map(Boolean);
+ let selected=-1;
+ const b=board(n,'small-board');b.style.maxWidth='415px';b.style.gap=n===9?'1px':'4px';gameBody().append(b);
+ const keys=el('div','controls');
+ for(let i=1;i<=n;i++){const x=el('button','arrowbtn',String(i));x.onclick=()=>fill(i);keys.append(x)}
+ const clear=el('button','secondary','지우기');clear.onclick=()=>fill(0);keys.append(clear);gameBody().append(keys);showNotice();
+ function fill(v){
+  if(selected<0||fixed[selected]||done||!Number.isInteger(v)||v<0||v>n)return;
+  a[selected]=v;paint();setScore(a.filter((v,i)=>v&&!fixed[i]).length,'채운 칸');
+  const bad=sudokuConflicts(a,n);
+  if(bad.size)setNotice('빨간 칸의 숫자가 행·열 또는 '+q+'×'+q+' 구역에서 중복돼요.');
+  else if(sudokuValid(a,n))finish(true,'스도쿠를 완성했어요!');
+  else setNotice('각 행·열·'+q+'×'+q+' 구역에 1~'+n+'을 한 번씩 넣으세요.');
+ }
+ function paint(){
+  const bad=sudokuConflicts(a,n);b.innerHTML='';
+  a.forEach((v,i)=>{
+   const r=Math.floor(i/n),c=i%n,x=cell(v?String(v):'');
+   x.style.background=bad.has(i)?'#a82e46':selected===i?'#795aa3':fixed[i]?'#3f3355':'#615277';
+   x.style.color=bad.has(i)?'#fff':fixed[i]?'#ddd4f1':'#fff2b6';
+   x.style.fontSize=n===9?'clamp(12px,3vw,19px)':'25px';
+   x.style.borderRight=(c+1)%q===0&&c<n-1?'3px solid #c5a0e7':'0';
+   x.style.borderBottom=(r+1)%q===0&&r<n-1?'3px solid #c5a0e7':'0';
+   x.setAttribute('aria-label',(r+1)+'행 '+(c+1)+'열 '+(v||'빈 칸')+(fixed[i]?' 고정 숫자':'')+(bad.has(i)?' 중복 오류':''));
+   x.setAttribute('aria-invalid',String(bad.has(i)));
+   x.onclick=()=>{selected=i;paint();if(fixed[i])setNotice('처음 주어진 숫자는 바꿀 수 없어요. 빈 칸을 선택하세요.')};b.append(x);
+  });
+ }
+ listen(document,'keydown',e=>{
+  if(!active?.gid.startsWith('sudoku')||['INPUT','TEXTAREA','SELECT'].includes(e.target.tagName)||e.target.isContentEditable)return;
+  if(/^[1-9]$/.test(e.key)&&Number(e.key)<=n){e.preventDefault();fill(Number(e.key))}
+  else if(['0','Backspace','Delete'].includes(e.key)){e.preventDefault();fill(0)}
+ });
+ paint();hint(n===4?'미니 4×4: 1~4를 한 번씩 · 각 행·열·2×2 구역의 합은 10':'클래식 9×9: 1~9를 한 번씩 · 각 행·열·3×3 구역의 합은 45');
+ setNotice('빈 칸을 선택하세요. 합이 같아도 숫자가 중복되면 정답이 아니에요.');setScore(0,'채운 칸');
 };
 // 06 / SLIDING PUZZLE
 // SLIDING PUZZLE 2.0 — tap-to-shift and real drag gesture to the empty space.
