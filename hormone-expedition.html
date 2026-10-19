@@ -1,0 +1,1070 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>호르몬 원정대 | O.Poong Game</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Do+Hyeon&family=Gowun+Dodum&family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* Layout: 픽셀 RPG. 상단 상태바 → 게임 화면(캔버스 + 이름표 오버레이) → 터치 조작부. 대화창·배틀·도감은 화면 위에 겹치는 창. 단일 다크 테마. */
+:root{
+  color-scheme:dark;
+  --bg:#120A15; --bg-2:#1C1121; --panel:#26172D; --panel-2:#33203B; --line:#4D3458;
+  --ink:#F8EEF1; --muted:#BFA8BF; --vessel:#E3425B; --gold:#F4C350; --gold-ink:#2A1A08;
+  --ok:#5BD291; --bad:#FF6E7E;
+  --g-brain:#B49CFF; --g-neck:#4ED7D3; --g-pancreas:#83D97F; --g-adrenal:#F6AE48; --g-gonad:#FF8CC1;
+  --f-display:"Do Hyeon","Black Han Sans","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-talk:"Gowun Dodum","Apple SD Gothic Neo","Malgun Gothic",sans-serif;
+  --f-body:"IBM Plex Sans KR","Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",sans-serif;
+  --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+}
+*{box-sizing:border-box}
+body{margin:0}
+[hidden]{display:none!important}
+html,body{background:var(--bg);color:var(--ink)}
+body{font-family:var(--f-body);font-size:16px;line-height:1.55;word-break:keep-all;-webkit-tap-highlight-color:transparent}
+button{font:inherit;color:inherit}
+h1,h2,h3{font-family:var(--f-display);font-weight:400;line-height:1.15;text-wrap:balance;margin:0}
+p{margin:0}
+:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.muted{color:var(--muted)}
+kbd{font-family:var(--f-mono);font-size:12px;border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:0 5px;color:var(--muted)}
+.btn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;padding:10px 16px;font-weight:700;font-size:15px;cursor:pointer}
+.btn:hover:not(:disabled){border-color:var(--ink)}
+.btn:disabled{opacity:.4;cursor:not-allowed}
+.btn.gold{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.btn.small{padding:5px 11px;font-size:13.5px;border-radius:8px}
+.linkish{background:none;border:0;color:var(--muted);text-decoration:underline;text-underline-offset:3px;cursor:pointer;font-size:13.5px;padding:0;text-align:left}
+
+.wrap{max-width:1000px;margin:0 auto;padding-inline:16px;padding-block:12px 24px;display:flex;flex-direction:column;gap:10px}
+
+/* status bar */
+.bar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center}
+.who{display:flex;flex-direction:column;line-height:1.2}
+.who b{font-family:var(--f-display);font-weight:400;font-size:20px}
+.who span{font-size:12.5px;color:var(--gold);font-weight:700}
+.xp{display:flex;align-items:center;gap:6px;font-family:var(--f-mono);font-size:12px;color:var(--muted)}
+.xp-bar{width:90px;height:7px;border-radius:99px;background:var(--panel-2);overflow:hidden}
+.xp-bar div{height:100%;background:var(--gold);transition:width .5s}
+.place{flex:1 1 220px;min-width:0}
+.place b{font-family:var(--f-display);font-weight:400;font-size:19px;display:block;line-height:1.2}
+.place span{font-size:13px;color:var(--muted)}
+.bar-r{display:flex;gap:6px;flex-wrap:wrap}
+
+/* stage */
+.stage{position:relative;width:min(100%, calc((100vh - 210px) * 1.5385));min-width:min(100%,320px);margin-inline:auto;aspect-ratio:320/208;border:3px solid var(--line);border-radius:8px;overflow:hidden;background:#000;box-shadow:0 0 0 3px #08040a, 0 18px 50px rgba(0,0,0,.5)}
+#game{position:absolute;inset:0;width:100%;height:100%;image-rendering:pixelated;image-rendering:crisp-edges;cursor:pointer;touch-action:none}
+.tags{position:absolute;inset:0;pointer-events:none}
+.tag{position:absolute;transform:translate(-50%,-100%);font-size:clamp(9px,1.25vw,12.5px);font-weight:700;white-space:nowrap;background:rgba(18,10,21,.78);border:1px solid var(--c,var(--line));color:var(--ink);border-radius:5px;padding:0 5px;line-height:1.5}
+.tag.area{background:none;border:0;color:rgba(248,238,241,.55);font-family:var(--f-display);font-size:clamp(11px,1.6vw,16px);letter-spacing:.06em;transform:translate(-50%,-50%)}
+.tag.mon{border-color:var(--vessel);color:#ffd0d6}
+.fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;transition:opacity .22s}
+.fade.on{opacity:1}
+
+/* title overlay */
+.title{position:absolute;inset:0;display:flex;flex-direction:column;justify-content:center;gap:12px;padding:clamp(14px,4vw,40px);background:linear-gradient(90deg,rgba(18,10,21,.94) 0%,rgba(18,10,21,.82) 55%,rgba(18,10,21,.25) 100%);overflow:auto}
+.title h1{font-size:clamp(40px,8vw,84px);line-height:1}
+.title h1 em{font-style:normal;color:var(--vessel)}
+.title .sub{font-family:var(--f-display);font-size:clamp(16px,2.4vw,24px);color:var(--gold)}
+.title .lede{color:var(--muted);max-width:30em;font-size:clamp(13px,1.6vw,16px)}
+.startbox{display:flex;flex-direction:column;gap:8px;max-width:380px}
+.startbox input{font:inherit;font-size:16px;background:var(--panel);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:9px 12px;width:100%}
+.startbox .row{display:flex;gap:8px;flex-wrap:wrap}
+
+/* controls */
+.controls{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+.hint{font-size:13px;color:var(--muted)}
+.pad{display:grid;grid-template-columns:repeat(3,52px);grid-template-rows:repeat(2,46px);gap:5px}
+.pad button,.abtn{background:var(--panel-2);border:1px solid var(--line);border-radius:10px;font-size:18px;font-weight:700;cursor:pointer;touch-action:none;user-select:none;-webkit-user-select:none}
+.pad button:active,.abtn:active{background:var(--line)}
+.pad .u{grid-column:2;grid-row:1}.pad .l{grid-column:1;grid-row:2}.pad .d{grid-column:2;grid-row:2}.pad .r{grid-column:3;grid-row:2}
+.abtn{width:76px;height:76px;border-radius:50%;background:var(--gold);color:var(--gold-ink);font-family:var(--f-display);font-size:20px;border-color:var(--gold)}
+.touch{display:flex;gap:18px;align-items:center}
+
+/* dialog */
+.veil{position:fixed;inset:0;background:rgba(6,3,8,.35);z-index:40}
+.dlg{position:fixed;left:0;right:0;bottom:0;z-index:41;padding-inline:16px;padding-block:0 calc(14px + env(safe-area-inset-bottom,0px))}
+.dlg-box{max-width:900px;margin:0 auto;background:var(--panel-2);border:3px solid var(--line);border-radius:14px;padding:14px 18px;display:grid;grid-template-columns:auto minmax(0,1fr);gap:14px;box-shadow:0 0 0 3px #08040a,0 -10px 40px rgba(0,0,0,.5);cursor:pointer}
+.portrait{width:76px;height:76px;image-rendering:pixelated;background:radial-gradient(circle,color-mix(in srgb,var(--c) 28%,transparent),transparent 70%),var(--bg-2);border-radius:10px;border:2px solid var(--c)}
+.dlg-name{font-family:var(--f-display);font-size:21px;color:var(--c)}
+.dlg-tag{font-size:12.5px;color:var(--muted);margin-left:8px;font-family:var(--f-body)}
+.dlg-text{font-family:var(--f-talk);font-size:clamp(16px,2.2vw,19px);line-height:1.65;min-height:3.3em}
+.dlg-next{font-size:12.5px;color:var(--muted);text-align:right}
+.dlg-next b{color:var(--gold);animation:blink 1s steps(2) infinite}
+@keyframes blink{50%{opacity:0}}
+
+/* battle */
+.battle{position:fixed;inset:0;z-index:30;background:var(--bg);overflow:auto}
+.b-in{max-width:920px;margin:0 auto;padding-inline:16px;padding-block:14px 30px;display:flex;flex-direction:column;gap:12px}
+.b-top{display:flex;justify-content:space-between;align-items:flex-end;gap:10px 18px;flex-wrap:wrap}
+.b-mon b{font-family:var(--f-display);font-weight:400;font-size:clamp(22px,3.5vw,32px);color:#ffd0d6;display:block;line-height:1.15}
+.hpwrap{display:flex;align-items:center;gap:8px;font-family:var(--f-mono);font-size:12px;color:var(--muted);margin-top:4px}
+.hp{width:min(260px,52vw);height:12px;border-radius:3px;background:#2a1018;border:2px solid #08040a;overflow:hidden}
+.hp div{height:100%;background:linear-gradient(var(--vessel),#b0263c);transition:width .5s}
+.hearts{font-size:24px;letter-spacing:3px;color:var(--vessel);line-height:1}
+.hearts i{font-style:normal;color:var(--line)}
+.arena{position:relative;width:100%;aspect-ratio:320/130;max-height:30vh;border:3px solid var(--line);border-radius:8px;overflow:hidden;box-shadow:0 0 0 3px #08040a;background:#000;margin-inline:auto}
+.arena canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
+.pop{position:absolute;font-family:var(--f-display);font-size:clamp(22px,4vw,40px);color:var(--gold);text-shadow:0 2px 0 #08040a;animation:popup .9s ease-out forwards;pointer-events:none}
+.pop.bad{color:var(--bad)}
+@keyframes popup{0%{opacity:0;transform:translateY(10px) scale(.8)}20%{opacity:1;transform:none}100%{opacity:0;transform:translateY(-28px)}}
+.msg{background:var(--panel-2);border:3px solid var(--line);border-radius:12px;padding:12px 16px;font-family:var(--f-talk);font-size:clamp(16px,2.2vw,19px);box-shadow:0 0 0 3px #08040a}
+.msg.ok{border-color:var(--ok)}.msg.bad{border-color:var(--bad)}
+.q{display:flex;flex-direction:column;gap:10px}
+.chip{font-size:12px;font-weight:700;border-radius:99px;padding:1px 10px;border:1px solid var(--gold);color:var(--gold);align-self:flex-start}
+.quote{font-family:var(--f-talk);font-size:clamp(17px,2.4vw,21px);background:var(--bg-2);border-left:4px solid var(--gold);border-radius:8px;padding:10px 14px}
+.qtext{font-size:clamp(17px,2.4vw,21px);font-weight:700}
+.opts{display:grid;gap:8px}
+@media (min-width:620px){.opts{grid-template-columns:1fr 1fr}}
+.opt{display:flex;gap:10px;align-items:center;text-align:left;background:var(--panel);border:2px solid var(--line);border-radius:10px;padding:11px 14px;font-size:16px;font-weight:600;cursor:pointer;min-height:52px}
+.opt:hover:not(:disabled){border-color:var(--gold)}
+.opt:disabled{cursor:default}
+.opt.right{border-color:var(--ok);background:color-mix(in srgb,var(--ok) 18%,var(--panel))}
+.opt.wrong{border-color:var(--bad);background:color-mix(in srgb,var(--bad) 16%,var(--panel))}
+.opt.dim{opacity:.45}
+.hcard{background:var(--bg-2);border:1px solid var(--line);border-radius:12px;padding:12px 16px}
+.hcard .nm{font-family:var(--f-display);font-size:23px}
+.abbr{font-family:var(--f-mono);font-size:12px;font-weight:600;color:var(--muted);border:1px solid var(--line);border-radius:5px;padding:0 5px;vertical-align:middle}
+dl{display:grid;grid-template-columns:3.4em minmax(0,1fr);gap:3px 10px;margin:6px 0 0;font-size:14.5px}
+dt{color:var(--muted);font-weight:600}
+dd{margin:0}
+
+/* boss */
+.boss-grid{display:grid;gap:12px}
+@media (min-width:860px){.boss-grid{grid-template-columns:minmax(0,1fr) minmax(0,1fr);align-items:start}}
+.crisis{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px}
+.gauge{display:flex;flex-direction:column;gap:5px;padding-top:24px}
+.g-label{font-weight:700;font-size:13.5px;color:var(--muted)}
+.g-track{position:relative;height:16px;border-radius:99px;background:var(--bg-2);border:1px solid var(--line)}
+.g-band{position:absolute;top:0;bottom:0;background:color-mix(in srgb,var(--ok) 35%,transparent);border-inline:2px solid var(--ok)}
+.g-mark{position:absolute;top:-6px;bottom:-6px;width:4px;margin-left:-2px;background:var(--ink);border-radius:2px;transition:left .8s cubic-bezier(.3,1.3,.5,1)}
+.g-val{position:absolute;bottom:calc(100% + 4px);left:50%;transform:translateX(-50%);font-family:var(--f-mono);font-weight:600;font-size:14px;white-space:nowrap;background:var(--bad);color:var(--bg);border-radius:5px;padding:0 6px}
+.g-mark.good .g-val{background:var(--ok)}
+.g-scale{display:flex;justify-content:space-between;font-family:var(--f-mono);font-size:11.5px;color:var(--muted)}
+.slots{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.slot{min-width:84px;border:1.5px dashed var(--line);border-radius:8px;padding:4px 8px;font-size:13px;font-weight:600;color:var(--muted);text-align:center}
+.slot.full{border-style:solid;border-color:var(--ok);color:var(--ink)}
+.hand{background:var(--bg-2);border:1px solid var(--line);border-radius:14px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.hand-grid{display:grid;gap:6px;grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}
+.htile{display:flex;gap:6px;align-items:center;text-align:left;background:var(--panel);border:1.5px solid var(--line);border-radius:8px;padding:6px 8px;font-size:13.5px;font-weight:600;cursor:pointer;line-height:1.25;min-width:0}
+.htile:hover:not(:disabled){border-color:var(--c)}
+.htile.sel{border-color:var(--gold);box-shadow:0 0 0 2px var(--gold);background:var(--panel-2)}
+.htile:disabled{opacity:.5;cursor:default}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--c);display:inline-block;flex:none}
+.dirs{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.dirs .btn{padding:12px;font-size:15.5px}
+
+/* modal */
+.modal{position:fixed;inset:0;z-index:50;background:rgba(6,3,8,.75);padding:16px;overflow:auto}
+.modal-box{max-width:940px;margin:16px auto;background:var(--panel);border:3px solid var(--line);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:14px;box-shadow:0 0 0 3px #08040a}
+.modal-head{display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.modal-head h2{font-size:30px}
+.codex{display:grid;gap:8px;grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+.cx{border-radius:12px;border:2px solid var(--line);padding:8px 10px;background:var(--bg-2);text-align:left;cursor:pointer;display:grid;grid-template-columns:40px minmax(0,1fr);gap:8px;align-items:center;min-height:64px}
+.cx canvas{width:40px;height:40px;image-rendering:pixelated}
+.cx.got{border-color:var(--c)}
+.cx .n{font-family:var(--f-display);font-size:17px;line-height:1.15;display:block}
+.cx .s{font-size:12px;color:var(--muted);display:block;line-height:1.3}
+.cx.lock{cursor:default;opacity:.6}
+.cert{border:3px solid var(--gold);border-radius:16px;padding:26px 22px;background:linear-gradient(160deg,rgba(244,195,80,.12),transparent 60%),var(--panel);display:flex;flex-direction:column;gap:12px}
+.cert h1{font-size:clamp(36px,6vw,58px);color:var(--gold)}
+.cert .whoname{font-family:var(--f-display);font-size:32px}
+.cert .body{font-family:var(--f-talk);font-size:17px}
+.stats{display:flex;gap:16px;flex-wrap:wrap;font-size:14px;color:var(--muted)}
+.stats b{font-family:var(--f-mono);font-size:21px;color:var(--ink)}
+.help li{margin-bottom:4px}
+
+.toast{position:fixed;left:50%;top:calc(14px + env(safe-area-inset-top,0px));transform:translateX(-50%);z-index:60;background:var(--gold);color:var(--gold-ink);font-weight:700;border-radius:10px;padding:9px 16px;box-shadow:0 0 0 3px #08040a,0 8px 30px rgba(0,0,0,.4);max-width:calc(100% - 32px);text-align:center;animation:tpop .25s ease-out}
+@keyframes tpop{from{opacity:0;transform:translate(-50%,-8px)}}
+.shake{animation:shake .35s}
+@keyframes shake{20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+@media (prefers-reduced-motion: reduce){*,*::before,*::after{animation:none!important;transition:none!important}}
+</style>
+
+</head><body>
+<main class="wrap">
+  <div class="bar" id="bar" hidden>
+    <div class="who"><b id="hudName"></b><span id="hudLv"></span></div>
+    <div class="xp"><span>XP</span><div class="xp-bar"><div id="xpBar"></div></div><span id="xpTxt"></span></div>
+    <div class="place"><b id="hudPlace"></b><span id="hudGoal"></span></div>
+    <div class="bar-r">
+      <button class="btn small" id="bCodex">카드 도감 <span id="cardCnt"></span></button>
+      <button class="btn small" id="bHelp">조작법</button>
+      <button class="btn small" id="bSound" aria-pressed="true">소리 켬</button>
+    </div>
+  </div>
+
+  <div class="stage" id="stage">
+    <canvas id="game" width="320" height="208" aria-label="게임 화면. 방향키로 이동하고 Space로 말을 겁니다."></canvas>
+    <div class="tags" id="tags"></div>
+    <div class="fade" id="fade"></div>
+    <div class="title" id="title">
+      <p class="muted" style="font-size:13px;font-weight:600;letter-spacing:.08em">생명과학Ⅰ · 항상성과 몸의 조절 · 내분비계 RPG</p>
+      <h1>호르몬 <em>원정대</em></h1>
+      <p class="sub">불균형 몬스터로부터 몸 왕국을 구하라</p>
+      <p class="lede">나노 탐험가가 되어 하모와 함께 몸속을 걸어 다니며 호르몬 주민 18명을 만나고, 지역을 막은 몬스터를 지식으로 물리치세요.</p>
+      <div class="startbox" id="startBox"></div>
+    </div>
+  </div>
+
+  <div class="controls" id="controls" hidden>
+    <p class="hint">이동 <kbd>←↑↓→</kbd> 또는 <kbd>WASD</kbd>, 화면 클릭 · 말 걸기 <kbd>Space</kbd> <kbd>Enter</kbd></p>
+    <div class="touch">
+      <div class="pad" id="pad">
+        <button class="u" data-d="up" aria-label="위">▲</button><button class="l" data-d="left" aria-label="왼쪽">◀</button><button class="d" data-d="down" aria-label="아래">▼</button><button class="r" data-d="right" aria-label="오른쪽">▶</button>
+      </div>
+      <button class="abtn" id="aBtn" aria-label="말 걸기">A</button>
+    </div>
+  </div>
+</main>
+
+<div class="veil" id="veil" hidden></div>
+<div class="dlg" id="dlg" hidden>
+  <div class="dlg-box" id="dlgBox" tabindex="0" role="dialog" aria-live="polite">
+    <canvas class="portrait" id="dlgPic" width="32" height="32"></canvas>
+    <div><div class="dlg-name" id="dlgName"></div><p class="dlg-text" id="dlgText"></p><p class="dlg-next"><b>▶</b> 클릭 · Space</p></div>
+  </div>
+</div>
+<div class="battle" id="battle" hidden><div class="b-in" id="bIn"></div></div>
+<div class="modal" id="modal" hidden></div>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ===================== DATA ===================== */
+const GL = {hypo:'시상 하부', antp:'뇌하수체 전엽', postp:'뇌하수체 후엽', thyroid:'갑상샘', parathy:'부갑상샘', pancreas:'이자', adrcortex:'부신 겉질', adrmed:'부신 속질', gonad:'생식샘'};
+const GLG = {hypo:'brain', antp:'brain', postp:'brain', thyroid:'neck', parathy:'neck', pancreas:'pancreas', adrcortex:'adrenal', adrmed:'adrenal', gonad:'gonad'};
+const GCOL = {brain:'#B49CFF', neck:'#4ED7D3', pancreas:'#83D97F', adrenal:'#F6AE48', gonad:'#FF8CC1'};
+const SIB = {hypo:'antp', antp:'postp', postp:'antp', thyroid:'parathy', parathy:'thyroid', pancreas:'adrmed', adrcortex:'adrmed', adrmed:'adrcortex', gonad:'antp'};
+const H = [
+ {id:'trh',name:'갑상샘 자극 호르몬 방출 호르몬',abbr:'TRH',gland:'hypo',src:'시상 하부',target:'뇌하수체 전엽',func:'TSH 분비 촉진',short:'TSH 분비 촉진',fam:'axis',acc:2,col:'#C8B4FF',
+  clues:['나는 다른 호르몬에게 "분비하라"고 명령하는, 명령의 명령 호르몬이야.','내가 뇌하수체 전엽에 도착하면 TSH 분비가 늘어나.'],
+  lines:['안녕, 나는 TRH! 정식 이름은 \'갑상샘 자극 호르몬 방출 호르몬\'. 이름이 좀 길지?','몸이 추워지면 사령관님이 나를 내보내. 나는 바로 아래 뇌하수체 전엽으로 달려가서 "TSH를 내보내!"라고 전하지.']},
+ {id:'gh',name:'생장 호르몬',abbr:'GH',gland:'antp',src:'뇌하수체 전엽',target:'온몸 (뼈·근육 등)',func:'몸의 생장 촉진, 단백질 합성 촉진',short:'뼈·근육의 생장 촉진',fam:'axis',acc:7,col:'#A58BF5',
+  clues:['성장기에 내가 부족하면 키가 잘 자라지 않아.','나는 뼈와 근육의 발달을 촉진해.'],
+  lines:['나는 생장 호르몬! 뇌하수체 전엽에서 나와 온몸으로 퍼져.','뼈와 근육이 자라게 하고 단백질 합성을 도와. 성장기에 내가 부족하면 키가 잘 안 자라고, 너무 많으면 거인증이 생길 수도 있어.']},
+ {id:'tsh',name:'갑상샘 자극 호르몬',abbr:'TSH',gland:'antp',src:'뇌하수체 전엽',target:'갑상샘',func:'티록신 분비 촉진',short:'티록신 분비 촉진',fam:'axis',acc:2,col:'#9C8BFF',
+  clues:['혈중 티록신이 많아지면 음성 피드백 때문에 내 분비가 줄어.','내 표적은 목에 있는 나비 모양 내분비샘이야.'],
+  lines:['나는 갑상샘 자극 호르몬, TSH! TRH의 명령을 받으면 출동해.','내 표적은 목의 갑상샘이야. 티록신을 더 분비하라고 자극하지. 그런데 티록신이 너무 많아지면 오히려 내 분비가 억제돼. 이게 바로 음성 피드백이야!']},
+ {id:'acth',name:'부신 겉질 자극 호르몬',abbr:'ACTH',gland:'antp',src:'뇌하수체 전엽',target:'부신 겉질',func:'당질 코르티코이드 분비 촉진',short:'당질 코르티코이드 분비 촉진',fam:'axis',acc:1,col:'#B79CF0',
+  clues:['스트레스를 받으면 내 분비가 늘어나.','나는 콩팥 위에 있는 내분비샘의 바깥쪽을 자극해.'],
+  lines:['나는 ACTH, 부신 겉질 자극 호르몬이야.','스트레스를 받으면 바빠져. 콩팥 위 부신 겉질로 가서 당질 코르티코이드를 분비하게 하거든.']},
+ {id:'gnh',name:'생식샘 자극 호르몬',abbr:'FSH·LH',gland:'antp',src:'뇌하수체 전엽',target:'난소 · 정소',func:'생식샘 발달 촉진, 성호르몬 분비 촉진',short:'생식샘 발달·성호르몬 분비 촉진',fam:'repro',acc:3,col:'#C9A5F2',
+  clues:['나는 생식 기관의 발달과 기능을 조절하라는 신호를 보내.','내 표적은 난소와 정소야.'],
+  lines:['우리는 생식샘 자극 호르몬, FSH와 LH 형제야!','난소와 정소로 가서 생식샘의 발달을 돕고 성호르몬 분비를 촉진해. 나중에 생식의 정원에서 또 보자!']},
+ {id:'adh',name:'항이뇨 호르몬',abbr:'ADH',gland:'postp',src:'뇌하수체 후엽',target:'콩팥',func:'콩팥에서 물의 재흡수 촉진 → 오줌량 감소, 혈장 삼투압 감소',short:'콩팥의 물 재흡수 촉진',fam:'water',acc:6,col:'#8FA8FF',
+  clues:['땀을 많이 흘리고 물을 못 마시면 내 분비가 늘어나.','나는 콩팥에서 물의 재흡수를 촉진해 오줌량을 줄여.'],
+  lines:['나는 항이뇨 호르몬, ADH. 사실 시상 하부에서 만들어져 이 후엽에 보관됐다가 분비돼.','혈장 삼투압이 높아지면, 그러니까 몸에 물이 부족하면 출동해서 콩팥에게 물을 다시 흡수하라고 해. 그러면 오줌량이 줄지.']},
+ {id:'oxy',name:'옥시토신',abbr:'',gland:'postp',src:'뇌하수체 후엽',target:'자궁 · 젖샘',func:'자궁 수축 촉진, 젖 분비 촉진',short:'자궁 수축·젖 분비 촉진',fam:'repro',acc:9,col:'#D2A8FF',
+  clues:['아기가 태어나는 순간, 내 역할이 아주 중요해.','나는 자궁 근육의 수축과 젖의 분비를 촉진해.'],
+  lines:['나는 옥시토신. 나도 시상 하부에서 만들어져 후엽에서 분비돼.','출산할 때 자궁 근육을 수축시키고, 아기에게 젖을 먹일 때 젖이 나오도록 도와.']},
+ {id:'thyroxine',name:'티록신',abbr:'',gland:'thyroid',src:'갑상샘',target:'온몸의 세포',func:'세포 호흡(물질대사) 촉진 → 열 발생 증가',short:'세포 호흡(물질대사) 촉진',fam:'axis',acc:8,col:'#4ED7D3',
+  clues:['추운 곳에 오래 있으면 내 분비가 늘어나 몸을 데워.','나는 세포 호흡을 촉진해. 내 성분에는 아이오딘이 들어 있어.'],
+  lines:['나는 티록신! 갑상샘에서 태어났고, 내 몸에는 아이오딘이 들어 있어.','온몸의 세포에서 세포 호흡을 촉진해 물질대사를 활발하게 해. 그래서 내가 늘면 열이 많이 나서 체온이 올라가!']},
+ {id:'calcitonin',name:'칼시토닌',abbr:'',gland:'thyroid',src:'갑상샘',target:'뼈 · 콩팥',func:'혈중 Ca²⁺ 농도 감소',short:'혈중 Ca²⁺ 농도 감소',fam:'ca',acc:6,col:'#7FE6D6',
+  clues:['혈액 속 칼슘 이온이 너무 많을 때 내가 나서.','나는 혈중 Ca²⁺ 농도를 낮춰서 파라토르몬과 반대로 작용해.'],
+  lines:['나는 칼시토닌. 나도 갑상샘에 살아.','혈액에 Ca²⁺이 너무 많으면 내가 나서서 농도를 낮춰. 아래쪽 마을 파라토르몬과는 정반대 일을 하지.']},
+ {id:'pth',name:'파라토르몬',abbr:'',gland:'parathy',src:'부갑상샘',target:'뼈 · 콩팥',func:'혈중 Ca²⁺ 농도 증가',short:'혈중 Ca²⁺ 농도 증가',fam:'ca',acc:1,col:'#3FB8C9',
+  clues:['혈액 속 칼슘 이온이 부족해지면 내 분비가 늘어나.','나는 뼈에서 Ca²⁺을 꺼내 혈중 Ca²⁺ 농도를 높여.'],
+  lines:['나는 파라토르몬. 갑상샘 뒤쪽에 숨은 작은 부갑상샘 마을 출신이야.','혈중 Ca²⁺이 부족하면 뼈 창고에서 Ca²⁺을 꺼내 혈액 속 농도를 높여.']},
+ {id:'insulin',name:'인슐린',abbr:'',gland:'pancreas',src:'이자 β세포',target:'간 · 근육 등 온몸의 세포',func:'간에서 포도당 → 글리코젠 합성 촉진, 세포의 포도당 흡수 촉진 → 혈당 감소',short:'포도당 → 글리코젠 합성, 혈당 감소',fam:'sugar',acc:4,col:'#83D97F',
+  clues:['밥을 먹고 혈당이 올라가면 내 분비가 늘어나.','나는 간에서 포도당을 글리코젠으로 합성시켜 혈당을 낮춰.'],
+  lines:['나는 인슐린! 랑게르한스섬의 β세포 마을에 살아.','밥을 먹어 혈당이 오르면 출동해. 간에서 포도당을 글리코젠으로 저장시키고, 세포가 포도당을 흡수하게 해서 혈당을 낮추지. 혈당을 낮추는 호르몬은 나뿐이야!']},
+ {id:'glucagon',name:'글루카곤',abbr:'',gland:'pancreas',src:'이자 α세포',target:'간',func:'간에서 글리코젠 → 포도당 분해 촉진 → 혈당 증가',short:'글리코젠 → 포도당 분해, 혈당 증가',fam:'sugar',acc:5,col:'#C2E26A',
+  clues:['굶은 시간이 길어져 혈당이 떨어지면 내 분비가 늘어나.','나는 간에서 글리코젠을 포도당으로 분해시켜 혈당을 높여.'],
+  lines:['나는 글루카곤. 저쪽 섬의 α세포 마을에 살아.','굶어서 혈당이 떨어지면 간으로 가서 글리코젠을 포도당으로 분해시켜. 인슐린과 나는 서로 반대로 작용하는 길항 관계야.']},
+ {id:'epi',name:'에피네프린',abbr:'',gland:'adrmed',src:'부신 속질',target:'간 · 심장 등',func:'간에서 글리코젠 분해 촉진 → 혈당 증가, 심장 박동 촉진',short:'심장 박동 촉진·혈당 증가',fam:'sugar',acc:8,col:'#FF9A5A',
+  clues:['깜짝 놀라거나 위급할 때 내가 재빨리 분비돼.','나는 심장 박동을 빠르게 하고, 간의 글리코젠 분해를 촉진해 혈당을 높여.'],
+  lines:['나는 에피네프린! 부신 속질, 그러니까 요새 한가운데 성채에 있어.','위급한 순간 교감 신경이 나를 깨우면, 심장을 빨리 뛰게 하고 간의 글리코젠을 분해시켜 혈당을 올려. 몸을 싸우거나 도망칠 준비 상태로 만들지!']},
+ {id:'cortisol',name:'당질 코르티코이드',abbr:'코르티솔',gland:'adrcortex',src:'부신 겉질',target:'간 등',func:'단백질·지방으로부터 포도당 생성 촉진 → 혈당 증가',short:'단백질·지방 → 포도당 생성, 혈당 증가',fam:'sugar',acc:1,col:'#F6AE48',
+  clues:['오랫동안 스트레스를 받을 때 내 분비가 늘어나.','나는 단백질과 지방을 포도당으로 바꾸는 과정을 촉진해 혈당을 높여.'],
+  lines:['나는 당질 코르티코이드, 코르티솔이라고도 불려. 부신 겉질 출신이야.','ACTH가 찾아오면 분비돼. 단백질과 지방을 포도당으로 바꾸는 걸 촉진해서 혈당을 높이고, 오래 이어지는 스트레스에 대응해.']},
+ {id:'aldo',name:'무기질 코르티코이드',abbr:'알도스테론',gland:'adrcortex',src:'부신 겉질',target:'콩팥',func:'콩팥에서 Na⁺ 재흡수 촉진',short:'콩팥의 Na⁺ 재흡수 촉진',fam:'water',acc:7,col:'#E8C66A',
+  clues:['나는 몸속 무기 염류, 특히 나트륨의 균형을 맞춰.','나는 콩팥에서 Na⁺의 재흡수를 촉진해.'],
+  lines:['나는 무기질 코르티코이드, 알도스테론이야. 나도 부신 겉질에 살아.','콩팥에서 Na⁺을 다시 흡수하게 해서 몸속 무기 염류의 균형을 맞춰. 소금 관리인이라고 불러 줘!']},
+ {id:'estrogen',name:'에스트로젠',abbr:'',gland:'gonad',src:'난소 (여포)',target:'자궁 등',func:'여성의 2차 성징 발현, 자궁 내막 발달',short:'여성 2차 성징·자궁 내막 발달',fam:'repro',acc:9,col:'#FF8CC1',
+  clues:['사춘기 여성의 2차 성징이 나타나게 해.','나는 월경 주기 동안 자궁 내막을 두껍게 만들어.'],
+  lines:['나는 에스트로젠. 난소의 여포에서 분비돼.','여성의 2차 성징이 나타나게 하고, 월경 주기 동안 자궁 내막을 두껍게 만들어.']},
+ {id:'progesterone',name:'프로게스테론',abbr:'',gland:'gonad',src:'난소 (황체)',target:'자궁',func:'자궁 내막 유지, 임신 유지',short:'자궁 내막 유지·임신 유지',fam:'repro',acc:3,col:'#F5A3D8',
+  clues:['임신이 유지되려면 내가 꼭 필요해.','나는 두꺼워진 자궁 내막이 유지되도록 해.'],
+  lines:['나는 프로게스테론. 배란 뒤에 생기는 난소의 황체에서 분비돼.','두꺼워진 자궁 내막을 유지시켜서 임신이 유지되도록 해.']},
+ {id:'testosterone',name:'테스토스테론',abbr:'',gland:'gonad',src:'정소',target:'온몸',func:'남성의 2차 성징 발현, 정자 생성 촉진',short:'남성 2차 성징·정자 생성 촉진',fam:'repro',acc:2,col:'#FF7A8A',
+  clues:['사춘기 남성의 목소리가 굵어지고 근육이 발달하게 해.','나는 정자 생성도 촉진해.'],
+  lines:['나는 테스토스테론. 정소에서 분비돼.','남성의 2차 성징을 나타나게 하고 정자 생성을 촉진해.']}
+];
+const HM = Object.fromEntries(H.map(h => [h.id, h]));
+const LORE = {
+ cmd:{name:'시상 하부 사령관', col:'#8E6FE0', acc:4,
+  lines:['어서 오게, 탐험가. 이곳은 시상 하부 사령부. 간뇌에 있으면서 체온, 혈당, 삼투압 정보를 모두 받아 보는 항상성의 사령탑이라네.','사령부 곳곳의 기록판 세 개를 읽고, 내 전령 TRH도 만나 보게. 그러면 아래 출구를 막은 혼돈의 안개를 물리칠 수 있을 걸세.'],
+  again:['기록판 세 개와 TRH를 모두 만났는가? 아래쪽 출구의 안개에게 배운 것을 보여 주게!']},
+ lore1:{name:'기록판 ① 내분비샘', note:'내분비샘은 관 없이 호르몬을 혈액으로 분비. 관으로 분비하면 외분비샘.',
+  lines:['내분비샘은 호르몬을 만들어 관 없이 혈액으로 바로 분비한다.','땀샘이나 소화샘처럼 관을 통해 분비물을 내보내는 샘은 외분비샘이라고 한다.']},
+ lore2:{name:'기록판 ② 표적 세포', note:'호르몬은 수용체가 있는 표적 세포에만 작용. 적은 양으로 큰 효과.',
+  lines:['호르몬은 혈액을 타고 온몸을 돌지만, 그 호르몬과 결합하는 수용체를 가진 표적 세포에만 작용한다.','호르몬은 매우 적은 양으로 효과를 낸다. 너무 적으면 결핍증, 너무 많으면 과다증이 나타난다.']},
+ lore3:{name:'기록판 ③ 신경과 호르몬', note:'신경: 빠르고 짧게. 호르몬: 느리지만 오래, 넓게.',
+  lines:['신경은 뉴런을 통해 신호를 빠르게 전달하지만, 효과가 짧고 범위가 좁다.','호르몬은 혈액으로 전달되어 느리지만, 효과가 오래가고 여러 기관에 넓게 작용한다.']}
+};
+const FIXED = [
+ {prompt:'호르몬은 내분비샘에서 어디로 분비될까?', opts:['혈액','관을 통해 몸 밖으로','소화관 안','시냅스 틈'], exp:'내분비샘에는 관이 없어서 호르몬을 혈액으로 바로 내보내요.'},
+ {prompt:'혈액을 타고 온몸을 도는 호르몬이 특정 세포에만 작용하는 까닭은?', opts:['표적 세포에만 그 호르몬의 수용체가 있어서','혈관이 그 세포에만 연결되어 있어서','다른 세포는 호르몬을 바로 분해해서','호르몬이 스스로 길을 찾아가서'], exp:'호르몬과 결합하는 수용체를 가진 세포만 반응해요. 이 세포를 표적 세포라고 해요.'},
+ {prompt:'신경에 의한 조절과 비교한 호르몬 조절의 특징은?', opts:['전달은 느리지만 효과가 오래 지속된다','전달이 빠르고 효과가 짧다','작용 범위가 좁다','뉴런을 통해 신호가 전달된다'], exp:'호르몬은 혈액으로 운반되어 느리지만, 효과가 오래가고 넓은 범위에 작용해요.'},
+ {prompt:'시상 하부는 뇌의 어느 부분에 속할까?', opts:['간뇌','중간뇌','연수','소뇌'], exp:'시상 하부는 간뇌에 속하며 체온·혈당·삼투압 조절의 중추예요.'},
+ {quote:'몸이 추워지면 나는 뇌하수체 전엽으로 가서 TSH를 내보내라고 전해.', prompt:'이 말을 한 주민은?', opts:['TRH','TSH','티록신','ADH'], hid:'trh'}
+];
+const CRISES = [
+ {title:'당분 폭탄', story:'급식으로 떡볶이와 탕수육을 잔뜩 먹었다. 혈당이 치솟는다!', ask:'혈당을 낮출 카드를 골라 쓰세요.',
+  g:{label:'혈당', unit:'mg/dL', min:40, max:220, lo:70, hi:110, dec:0}, start:185, steps:[{h:'insulin', dir:'up', to:100}],
+  hint:'혈당을 낮추는 호르몬은 단 하나, β세포 마을 주민이에요.', win:'인슐린이 간에 포도당을 글리코젠으로 저장시켜 혈당이 정상으로 돌아왔다!'},
+ {title:'굶주림의 저주', story:'저녁을 거른 채 3시간 동안 축구를 했다. 혈당이 뚝 떨어졌다!', ask:'이자의 카드로 혈당을 올리세요.',
+  g:{label:'혈당', unit:'mg/dL', min:40, max:220, lo:70, hi:110, dec:0}, start:58, steps:[{h:'glucagon', dir:'up', to:92}],
+  hint:'α세포 마을 주민이 간의 글리코젠을 포도당으로 분해해요.', win:'글루카곤이 간의 글리코젠을 포도당으로 분해해 혈당이 올라갔다!'},
+ {title:'사막의 열풍', story:'한여름 체육대회에서 땀을 2 L나 흘렸다. 혈장 삼투압이 높아졌다!', ask:'콩팥이 물을 더 붙잡게 하세요.',
+  g:{label:'혈장 삼투압', unit:'mOsm/kg', min:260, max:330, lo:285, hi:295, dec:0}, start:312, steps:[{h:'adh', dir:'up', to:291}],
+  hint:'뇌하수체 후엽의 물 관리인을 불러요.', win:'ADH가 콩팥의 물 재흡수를 늘려 오줌량이 줄고 삼투압이 내려갔다!'},
+ {title:'홍수 마법', story:'목이 말라 물을 2 L 한꺼번에 들이켰다. 이번엔 혈장 삼투압이 너무 낮다!', ask:'콩팥이 물을 덜 붙잡게 하세요.',
+  g:{label:'혈장 삼투압', unit:'mOsm/kg', min:260, max:330, lo:285, hi:295, dec:0}, start:272, steps:[{h:'adh', dir:'down', to:289}],
+  hint:'방금 쓴 카드를 반대 방향으로 써 보세요.', win:'ADH가 줄어 콩팥이 물을 덜 흡수하고, 묽은 오줌이 많이 나와 삼투압이 회복됐다!'},
+ {title:'절대 냉기', story:'영하 15 ℃ 스키장에서 길을 잃었다. 체온이 떨어진다!', ask:'명령이 전달되는 순서대로 카드 3장을 차례로 쓰세요.',
+  g:{label:'체온', unit:'℃', min:34, max:39, lo:36.5, hi:37.5, dec:1}, start:35.4,
+  steps:[{h:'trh', dir:'up', to:35.7},{h:'tsh', dir:'up', to:36.1},{h:'thyroxine', dir:'up', to:36.9}],
+  hint:'시상 하부 → 뇌하수체 전엽 → 갑상샘 순서로 명령이 내려가요.', win:'TRH → TSH → 티록신 순으로 명령이 전달되어 세포 호흡이 늘고 열이 발생했다!'},
+ {title:'폭주의 불꽃', story:'체온은 돌아왔는데 티록신이 멈추지 않는다! 혈중 티록신이 정상의 175 %다.', ask:'음성 피드백! 뇌하수체 전엽의 카드로 갑상샘을 진정시키세요.',
+  g:{label:'혈중 티록신 (정상 대비)', unit:'%', min:0, max:200, lo:80, hi:120, dec:0}, start:175, steps:[{h:'tsh', dir:'down', to:100}],
+  hint:'갑상샘을 자극하던 전엽의 전령 분비를 줄여요.', win:'티록신이 많아지면 TSH 분비가 억제된다. 이것이 음성 피드백!'},
+ {title:'뼈 도둑', story:'칼슘 섭취가 부족한 날이 이어졌다. 혈중 Ca²⁺ 농도가 떨어졌다!', ask:'혈중 Ca²⁺ 농도를 올리세요.',
+  g:{label:'혈중 Ca²⁺', unit:'mg/dL', min:6, max:13, lo:9, hi:10.5, dec:1}, start:7.4, steps:[{h:'pth', dir:'up', to:9.6}],
+  hint:'부갑상샘 마을의 뼈 창고지기를 불러요.', win:'파라토르몬이 뼈에서 Ca²⁺을 꺼내 혈중 농도를 올렸다!'},
+ {title:'소금 증발', story:'싱겁게만 먹는 생활을 너무 오래 했다. 혈중 Na⁺ 농도가 낮다!', ask:'콩팥이 Na⁺을 더 붙잡게 하세요.',
+  g:{label:'혈중 Na⁺', unit:'mmol/L', min:120, max:155, lo:135, hi:145, dec:0}, start:128, steps:[{h:'aldo', dir:'up', to:139}],
+  hint:'부신 요새 바깥 성벽의 소금 관리인이에요.', win:'무기질 코르티코이드가 콩팥의 Na⁺ 재흡수를 늘려 농도가 회복됐다!'}
+];
+const LEVELS = [[0,'견습 탐험가'],[60,'혈관 항해사'],[150,'내분비 탐정'],[260,'호르몬 연구원'],[400,'항상성 수호자'],[560,'몸 왕국의 영웅']];
+
+const THEMES = {
+ brain:   {floor:'#3A2A52', floor2:'#45325F', wall:'#221632', top:'#5E4687', fluid:'#5A2440', fl2:'#8A3A5E', deco:'pillar', dc:'#A88BE8', dc2:'#6E55A8'},
+ pit:     {floor:'#2F2850', floor2:'#3A3262', wall:'#1B1532', top:'#4E4593', fluid:'#3B2F70', fl2:'#5C4FA8', deco:'tower', dc:'#9C8BFF', dc2:'#5E52B0'},
+ neck:    {floor:'#1E3A40', floor2:'#25484E', wall:'#122427', top:'#2F6B6E', fluid:'#1B4F78', fl2:'#3E86B0', deco:'crystal', dc:'#7FF0EA', dc2:'#2FA6A2'},
+ island:  {floor:'#3E5A2E', floor2:'#4A6A36', wall:'#1D2D15', top:'#5D7F45', fluid:'#1D4E80', fl2:'#4A86C0', deco:'tree', dc:'#8FD17F', dc2:'#4A7A3A'},
+ adrenal: {floor:'#4A3622', floor2:'#56412B', wall:'#2A1C10', top:'#8A6A3A', fluid:'#6B2A20', fl2:'#A04030', deco:'torch', dc:'#F6AE48', dc2:'#8A5A22'},
+ garden:  {floor:'#3D2A3A', floor2:'#4A3346', wall:'#24151F', top:'#7A4867', fluid:'#6B2A4A', fl2:'#A04A78', deco:'bush', dc:'#FF8CC1', dc2:'#5E8A4A'},
+ heart:   {floor:'#3A1418', floor2:'#45181E', wall:'#1E0A0C', top:'#7A2530', fluid:'#9E2337', fl2:'#E3425B', deco:'valve', dc:'#E3425B', dc2:'#7A2530'}
+};
+const ROOMS = [
+ {name:'시상 하부 사령부', sub:'간뇌 · 항상성의 사령탑', theme:'brain', mon:'m0',
+  map:['####################','#T,......##......,T#','#....S........S....#','#..................#','#.,,....T..T....,,.#','#..................#','#~~~...........S~~~#','#~~~............~~~#','#..................#','#.T......,,......T.#','#.........,........#','#T........,.......T#','##########D#########'],
+  npcs:[{id:'cmd',x:10,y:2},{id:'lore1',x:5,y:2},{id:'lore2',x:14,y:2},{id:'lore3',x:15,y:6},{id:'trh',x:4,y:8}],
+  areas:[],
+  intro:[['hamo','탐험가님, 정신이 드셨군요! 저는 나노 탐사봇 하모예요. 지금 우리는 몸속 깊은 곳, 간뇌의 시상 하부에 있어요.'],
+         ['hamo','큰일이에요. 몸 왕국 곳곳에 불균형 몬스터들이 나타나 길을 막고 있어요. 혈당, 체온, 체액 농도가 마구 흔들리고 있죠.'],
+         ['hamo','몸 안의 상태를 일정하게 유지하는 것을 항상성이라고 해요. 몬스터는 지식으로만 물리칠 수 있어요. 각 지역 주민들에게 배워야 해요!'],
+         ['hamo','방향키로 걷고, 주민 앞에서 Space를 누르면 말을 걸 수 있어요. 화면을 클릭해도 그쪽으로 걸어가요. 머리 위에 ! 가 뜬 주민부터 찾아가 봐요!']]},
+ {name:'뇌하수체 성', sub:'앞쪽은 전엽, 뒤쪽은 후엽', theme:'pit', mon:'m1',
+  map:['##########U#########','#T.......,.,......T#','#...........#......#','#..T....T...#..T...#','#...........#......#','#.......,,.........#','#...........#......#','#..T....T...#..T...#','#...........#......#','#,.........,#,.....#','#.........,,,,.....#','#T........,,,.....T#','##########D#########'],
+  npcs:[{id:'gh',x:2,y:2},{id:'tsh',x:6,y:4},{id:'acth',x:10,y:7},{id:'gnh',x:4,y:9},{id:'adh',x:15,y:4},{id:'oxy',x:17,y:8}],
+  areas:[{x:6,y:1.5,t:'뇌하수체 전엽'},{x:15.5,y:1.5,t:'뇌하수체 후엽'}],
+  intro:[['hamo','시상 하부 바로 아래, 콩알만 한 뇌하수체 성이에요. 벽을 기준으로 왼쪽이 전엽, 오른쪽이 후엽이에요.'],
+         ['hamo','전엽에는 다른 내분비샘을 깨우는 전령들이, 후엽에는 시상 하부에서 만들어진 호르몬들이 살아요. 여섯 명을 모두 만나 봐요!']]},
+ {name:'나비 계곡', sub:'갑상샘과 부갑상샘 마을', theme:'neck', mon:'m2',
+  map:['##########U#########','#TT......,.......TT#','#T,,............,,T#','#..,,..........,,..#','#...,,...TT...,,...#','#....,........,....#','#~~~~~~~=..=~~~~~~~#','#..................#','#.T.........,,,,,..#','#...........,...,..#','#.........,.,,,,,..#','#T........,......T.#','##########D#########'],
+  npcs:[{id:'thyroxine',x:4,y:3},{id:'calcitonin',x:15,y:3},{id:'pth',x:14,y:9}],
+  areas:[{x:10,y:2.6,t:'갑상샘 (나비 날개)'},{x:14,y:7.4,t:'부갑상샘 마을'}],
+  intro:[['hamo','목 앞쪽, 나비 날개처럼 생긴 갑상샘 계곡이에요. 물길 아래쪽엔 쌀알만 한 부갑상샘 마을도 있어요.'],
+         ['hamo','칼슘을 두고 서로 반대 일을 하는 주민들이 산대요. 누가 누구인지 잘 기억해 둬요!']]},
+ {name:'랑게르한스 섬', sub:'이자 속 내분비 세포의 섬', theme:'island', mon:'m3',
+  map:['##########U#########','#~~~~~~~~~.~~~~~~~~#','#~~~~~~~~~.~~~~~~~~#','#~~,,,,~~~.~~~,,,,~#','#~,....,~~.~~,....,#','#~,....,==.==,....,#','#~,....,~~.~~,....,#','#~~,,,,~~~.~~~,,,,~#','#~~~~~~~~~.~~~~~~~~#','#~~~~~~~~...~~~~~~~#','#~~~~~~~~...~~~~~~~#','#~~~~~~~~...~~~~~~~#','##########D#########'],
+  npcs:[{id:'glucagon',x:4,y:5},{id:'insulin',x:16,y:5}],
+  areas:[{x:4.5,y:2.5,t:'α세포 마을'},{x:15.5,y:2.5,t:'β세포 마을'}],
+  intro:[['hamo','여기는 이자예요. 소화 효소를 만드는 넓은 땅 사이에 내분비 세포 무리가 섬처럼 떠 있어요.'],
+         ['hamo','이 세포 무리를 진짜로 랑게르한스섬이라고 불러요! 왼쪽 α세포 마을과 오른쪽 β세포 마을이 혈당을 두고 줄다리기를 한대요.']]},
+ {name:'부신 요새', sub:'바깥 성벽은 겉질, 안쪽 성채는 속질', theme:'adrenal', mon:'m4',
+  map:['##########U#########','#T................T#','#..##############..#','#..#,,,,,,,,,,,,#..#','#..#,..........,#..#','#..#,...####...,#..#','#..#,...#..#...,#..#','#..#,...#..#...,#..#','#..#,...##.#...,#..#','#..#,..........,#..#','#..######..######..#','#T................T#','##########D#########'],
+  npcs:[{id:'cortisol',x:6,y:4},{id:'aldo',x:13,y:9},{id:'epi',x:9,y:6}],
+  areas:[{x:6.5,y:1.5,t:'부신 겉질 (바깥 성벽)'},{x:10,y:4.6,t:'부신 속질'}],
+  intro:[['hamo','콩팥 위에 모자처럼 얹힌 부신 요새예요. 바깥 성벽 안쪽이 부신 겉질, 한가운데 성채가 부신 속질이에요.'],
+         ['hamo','요새 아래쪽 문으로 들어갈 수 있어요. 위급 상황과 스트레스에 대응하는 주민들이 지키고 있어요.']]},
+ {name:'생식의 정원', sub:'난소와 정소', theme:'garden', mon:'m5',
+  map:['##########U#########','#T.T.T........T.T.T#','#..................#','#.,,,,,......,,,,,.#','#.,...,......,...,.#','#.,...,......,...,.#','#.,,,,,......,,,,,.#','#..................#','#..T....T..T....T..#','#..................#','#T................T#','#..................#','##########D#########'],
+  npcs:[{id:'estrogen',x:3,y:4},{id:'progesterone',x:5,y:5},{id:'testosterone',x:15,y:4}],
+  areas:[{x:4,y:2.5,t:'난소 정원'},{x:15,y:2.5,t:'정소 정원'}],
+  intro:[['hamo','생식샘 정원이에요. 여성은 난소, 남성은 정소가 성호르몬을 분비해요.'],
+         ['hamo','뇌하수체 성에서 만난 FSH·LH 형제가 이 정원으로 신호를 보낸다고 했죠? 아래쪽 출구는 심장으로 이어져요.']]},
+ {name:'심장 터미널', sub:'최종 결전 · 항상성 붕괴의 왕', theme:'heart', mon:'boss',
+  map:['##########U#########','#~~~~..........~~~~#','#~~~............~~~#','#~~..............~~#','#~................~#','#..................#','#..................#','#..................#','#~................~#','#~~..............~~#','#~~~............~~~#','#~~~~..........~~~~#','####################'],
+  npcs:[], areas:[], bossPos:{x:10,y:5},
+  intro:[['hamo','모든 혈관이 모이는 심장 터미널이에요. 그런데… 저기 거대한 그림자가!'],
+         ['cmd','탐험가, 들리나? 사령부다. 저 녀석이 바로 항상성 붕괴의 왕 카오스일세. 몸 곳곳에 위기를 일으키는 원흉이지.'],
+         ['cmd','카오스가 위기를 일으키면, 자네가 모은 호르몬 카드를 골라 분비를 늘릴지 줄일지 정해서 맞서게. 수치를 초록색 정상 범위로 돌려놓으면 녀석이 약해질 걸세!']]}
+];
+const MON = {
+ m0:{name:'혼돈의 안개', col:'#8C7AB8', dark:'#5D4E85', eye:'#FFD166', horn:'#D9CFF2', atk:'휘감는 장막', hello:'크크크… 기초도 모르는 탐험가는 이 안개를 지날 수 없다!', bye:'으으… 지식의 빛이 너무 밝아…'},
+ m1:{name:'신호 도둑 노이즈', col:'#6A4BB0', dark:'#3F2A75', eye:'#7FF0EA', horn:'#F4C350', atk:'전파 방해', hello:'호르몬 명령을 다 가로채 주마! 누가 누구에게 명령하는지 알기나 해?', bye:'신호가… 제대로 전달되고 있잖아…!'},
+ m2:{name:'냉기 박쥐 프로스트', col:'#3E8EAA', dark:'#25607A', eye:'#FFFFFF', horn:'#BFF6FB', atk:'얼음 바람', hello:'키이익! 체온도 칼슘도 내 마음대로 흔들어 주지!', bye:'따, 따뜻해… 티록신 녀석들…'},
+ m3:{name:'당분 슬라임', col:'#E58CC8', dark:'#B05A95', eye:'#FFF3A0', horn:'#FFFFFF', atk:'끈적 설탕 공격', hello:'뽀글뽀글~ 혈당을 마구 올렸다 내렸다 해 주마!', bye:'뽀글… 혈당이… 정상이 됐어…'},
+ m4:{name:'공포 그림자', col:'#4A3542', dark:'#2A1B26', eye:'#FF6E7E', horn:'#8A6A7A', atk:'오싹한 손길', hello:'흐흐흐… 겁에 질리면 몸이 어떻게 되는지 알고 있나?', bye:'심장이 빨리 뛰어도… 넌 겁먹지 않는구나…'},
+ m5:{name:'엉킴 덩굴', col:'#5E8A4A', dark:'#3A5E2C', eye:'#FFB3D9', horn:'#C2E26A', atk:'덩굴 휘감기', hello:'정원의 호르몬들을 몽땅 엉켜 놓을 테다!', bye:'덩굴이… 풀려 버렸어…'},
+ boss:{name:'항상성 붕괴의 왕 카오스', col:'#8A1C2E', dark:'#4E0E18', eye:'#F4C350', horn:'#2A0A10', atk:'불균형 파동', crown:true, hello:'크하하하! 혈당, 체온, 삼투압… 모든 균형을 무너뜨려 주마!', bye:'말도 안 돼… 호르몬들이 이렇게 정확하게 협력하다니…'}
+};
+
+/* ===================== STATE ===================== */
+const KEY = 'hormone-rpg-v1';
+const fresh = () => ({name:'', room:0, x:9, y:5, dir:'up', met:{}, cards:{}, beaten:{}, intro:{}, xp:0, right:0, total:0, bossAt:0, done:false, started:false});
+let S = (() => { try { return Object.assign(fresh(), JSON.parse(localStorage.getItem(KEY)) || {}); } catch(e){ return fresh(); } })();
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch(e){} };
+let soundOn = true; try { soundOn = localStorage.getItem('hq-sound') !== '0'; } catch(e){}
+
+/* ===================== HELPERS ===================== */
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const shuffle = a => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const josa = (w, a, b) => { const c = w.trim().slice(-1).charCodeAt(0); return w + (c >= 0xAC00 && c <= 0xD7A3 && (c - 0xAC00) % 28 ? a : b); };
+const hcol = h => GCOL[GLG[h.gland]];
+let actx = null;
+function beep(kind){
+  if (!soundOn) return;
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    const seqs = {ok:[[660,0],[990,.09]], bad:[[240,0],[160,.12]], tick:[[740,0]], win:[[523,0],[659,.12],[784,.24],[1046,.36]], talk:[[880,0]], step:[[200,0]], hit:[[180,0],[120,.06]], door:[[392,0],[523,.08]], card:[[784,0],[1175,.1]]};
+    (seqs[kind] || seqs.tick).forEach(([f, t]) => {
+      const o = actx.createOscillator(), g = actx.createGain(), now = actx.currentTime + t;
+      o.type = (kind === 'bad' || kind === 'hit') ? 'square' : 'triangle'; o.frequency.value = f;
+      const vol = kind === 'talk' ? .025 : kind === 'step' ? .015 : (kind === 'bad' || kind === 'hit') ? .05 : .1;
+      g.gain.setValueAtTime(.0001, now); g.gain.exponentialRampToValueAtTime(vol, now + .01); g.gain.exponentialRampToValueAtTime(.0001, now + (kind === 'talk' || kind === 'step' ? .05 : .18));
+      o.connect(g).connect(actx.destination); o.start(now); o.stop(now + .2);
+    });
+  } catch(e){}
+}
+let toastT;
+function toast(msg){ const t = $('#toast'); t.textContent = msg; t.hidden = false; t.style.animation = 'none'; void t.offsetWidth; t.style.animation = ''; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 2600); }
+function level(xp){ let i = 0; LEVELS.forEach((l, k) => { if (xp >= l[0]) i = k; }); return i; }
+function addXP(n){ const b = level(S.xp); S.xp += n; save(); renderHud(); if (level(S.xp) > b) { beep('win'); setTimeout(() => toast(`레벨 업! 이제 '${LEVELS[level(S.xp)][1]}'`), 300); } }
+
+/* ===================== PIXEL DRAWING ===================== */
+const cv = $('#game'), ctx = cv.getContext('2d'); ctx.imageSmoothingEnabled = false;
+const TS = 16, COLS = 20, ROWS = 13;
+const P = (c, x, y, s) => (ux, uy, w, h, col) => { c.fillStyle = col; c.fillRect(Math.round(x + ux * s), Math.round(y + uy * s), Math.ceil(w * s), Math.ceil(h * s)); };
+function circ(p, cx, cy, r, col){ for (let dy = -r; dy <= r; dy++) { const hw = Math.round(Math.sqrt(r * r - dy * dy)); p(cx - hw, cy + dy, hw * 2 + 1, 1, col); } }
+function drawBlob(c, x, y, s, col, acc, t, seed, look){
+  const p = P(c, x, y, s), b = Math.sin(t * 4 + seed) > 0 ? 0 : 1;
+  p(3, 14, 10, 2, 'rgba(0,0,0,.35)');
+  p(7, 2 + b, 2, 1, col); p(6, 3 + b, 4, 1, col);
+  circ(p, 8, 9 + b, 6, col);
+  p(4, 6 + b, 2, 1, 'rgba(255,255,255,.5)'); p(3, 7 + b, 1, 2, 'rgba(255,255,255,.35)');
+  p(3, 12 + b, 10, 2, 'rgba(0,0,0,.12)');
+  const lx = look === 'left' ? -1 : look === 'right' ? 1 : 0, ly = look === 'up' ? -1 : 0;
+  if (acc === 6) { p(4, 7 + b, 8, 1, '#1a1020'); p(4, 8 + b, 1, 3, '#1a1020'); p(11, 8 + b, 1, 3, '#1a1020'); }
+  p(5, 8 + b, 2, 3, '#fff'); p(9, 8 + b, 2, 3, '#fff');
+  p(5.5 + lx * .5, 9 + b + ly, 1, 2, '#1a1020'); p(9.5 + lx * .5, 9 + b + ly, 1, 2, '#1a1020');
+  p(7, 12 + b, 2, 1, '#1a1020');
+  if (acc === 1) { p(5, 1 + b, 6, 2, '#2a1a30'); p(3, 3 + b, 10, 1, '#2a1a30'); p(5, 2 + b, 6, 1, '#4a3050'); }
+  if (acc === 2) { p(8, -1 + b, 1, 3, '#e8e0f0'); p(7, -2 + b, 3, 2, '#f4c350'); }
+  if (acc === 3) { p(10, 3 + b, 2, 2, '#ff5d9e'); p(12, 2 + b, 2, 4, '#ff5d9e'); p(8, 2 + b, 2, 4, '#ff5d9e'); }
+  if (acc === 4) { p(5, 1 + b, 6, 2, '#f4c350'); p(5, 0 + b, 1, 1, '#f4c350'); p(7, -1 + b, 2, 2, '#f4c350'); p(10, 0 + b, 1, 1, '#f4c350'); p(7, 1 + b, 2, 1, '#e3425b'); }
+  if (acc === 5) { p(9, 0 + b, 3, 2, '#6cd36a'); p(11, -1 + b, 2, 1, '#6cd36a'); p(8, 2 + b, 1, 1, '#3d8a3b'); }
+  if (acc === 7) { p(3, 12 + b, 10, 2, '#e3425b'); p(10, 13 + b, 2, 2, '#e3425b'); }
+  if (acc === 8) { p(2, 5 + b, 12, 1, '#e3425b'); p(13, 5 + b, 2, 2, '#e3425b'); }
+  if (acc === 9) { p(10, 1 + b, 3, 3, '#ffe3f0'); p(11, 2 + b, 1, 1, '#f4c350'); }
+}
+function drawPlayer(c, x, y, s, dir, frame){
+  const p = P(c, x, y, s);
+  p(3, 14, 10, 2, 'rgba(0,0,0,.35)');
+  p(5, 12 - (frame === 1 ? 1 : 0), 2, 3, '#3a4250'); p(9, 12 - (frame === 2 ? 1 : 0), 2, 3, '#3a4250');
+  p(4, 8, 8, 5, '#f4c350'); p(4, 11, 8, 1, '#a8761e'); p(7, 8, 2, 3, '#e3425b');
+  p(3, 9 - (frame === 2 ? 1 : 0), 1, 3, '#f4c350'); p(12, 9 - (frame === 1 ? 1 : 0), 1, 3, '#f4c350');
+  if (dir === 'up') { p(5, 8, 6, 4, '#7d8796'); p(6, 9, 4, 1, '#a8b1bd'); }
+  circ(p, 8, 5, 4, '#e8eef2'); p(5, 7, 6, 1, '#c3ccd4');
+  p(8, -1, 1, 2, '#c3ccd4'); p(7, -2, 3, 1, '#e3425b');
+  if (dir === 'down') { p(5, 4, 6, 3, '#2fc6d6'); p(6, 4, 2, 1, '#bff6fb'); }
+  if (dir === 'left') { p(4, 4, 3, 3, '#2fc6d6'); p(4, 4, 1, 1, '#bff6fb'); }
+  if (dir === 'right') { p(9, 4, 3, 3, '#2fc6d6'); p(11, 4, 1, 1, '#bff6fb'); }
+}
+function drawHamo(c, x, y, s, t){
+  const p = P(c, x, y, s), b = Math.round(Math.sin(t * 5) * 1.2);
+  p(5, 14, 6, 2, 'rgba(0,0,0,.25)');
+  const w = Math.abs(Math.sin(t * 25)) * 4 + 1; p(8 - w, 2 + b, w * 2, 1, '#e8eef2'); p(7.5, 3 + b, 1, 2, '#e8eef2');
+  circ(p, 8, 8 + b, 4, '#f4c350'); p(5, 7 + b, 6, 2, '#2a1a10'); p(6, 7 + b, 1, 1, '#2fc6d6'); p(9, 7 + b, 1, 1, '#2fc6d6');
+  p(5, 11 + b, 6, 1, '#c89220');
+}
+function drawMonster(c, x, y, s, m, t, flash){
+  const p = P(c, x, y, s), b = Math.round(Math.sin(t * 3) * 1);
+  const col = flash ? '#ffffff' : m.col, dark = flash ? '#ffffff' : m.dark;
+  p(5, 29, 22, 3, 'rgba(0,0,0,.35)');
+  p(8, 4 + b, 3, 4, m.horn); p(9, 2 + b, 2, 2, m.horn); p(21, 4 + b, 3, 4, m.horn); p(21, 2 + b, 2, 2, m.horn);
+  if (m.crown) { p(10, 0 + b, 12, 3, '#f4c350'); p(10, -2 + b, 2, 2, '#f4c350'); p(15, -3 + b, 2, 3, '#f4c350'); p(20, -2 + b, 2, 2, '#f4c350'); p(15, 0 + b, 2, 2, '#e3425b'); }
+  p(2, 14 + b, 3, 2, col); p(27, 14 + b, 3, 2, col); p(1, 18 + b, 3, 2, col); p(28, 18 + b, 3, 2, col);
+  circ(p, 16, 17 + b, 12, col);
+  circ(p, 16, 21 + b, 7, dark);
+  p(8, 9 + b, 2, 1, 'rgba(255,255,255,.35)'); p(7, 10 + b, 1, 3, 'rgba(255,255,255,.3)');
+  p(9, 12 + b, 5, 3, '#fff'); p(18, 12 + b, 5, 3, '#fff');
+  p(9, 10 + b, 3, 1, '#1a0810'); p(11, 11 + b, 3, 1, '#1a0810'); p(20, 10 + b, 3, 1, '#1a0810'); p(18, 11 + b, 3, 1, '#1a0810');
+  p(12, 13 + b, 2, 2, flash ? '#1a0810' : m.eye); p(18, 13 + b, 2, 2, flash ? '#1a0810' : m.eye);
+  p(11, 20 + b, 10, 3, '#1a0810'); p(12, 20 + b, 2, 1, '#fff'); p(18, 20 + b, 2, 1, '#fff'); p(15, 22 + b, 2, 1, '#fff');
+}
+function drawSign(c, x, y){ const p = P(c, x, y, 1); p(2, 13, 12, 2, 'rgba(0,0,0,.3)'); p(3, 3, 10, 11, '#8b7fa8'); p(3, 3, 10, 1, '#b8aed0'); p(5, 6, 6, 1, '#4f4470'); p(5, 8, 6, 1, '#4f4470'); p(5, 10, 4, 1, '#4f4470'); p(7, 14, 2, 2, '#6a5f88'); }
+function hash(x, y){ return ((x * 73856093) ^ (y * 19349663)) >>> 0; }
+function drawTile(c, ch, x, y, T, t){
+  const px = x * TS, py = y * TS, h = hash(x, y), p = P(c, px, py, 1);
+  if (ch === '#') {
+    p(0, 0, 16, 16, T.wall); p(0, 0, 16, 3, T.top); p(0, 3, 16, 1, 'rgba(0,0,0,.35)');
+    p((h % 3) * 5 + 1, 8, 1, 8, 'rgba(0,0,0,.25)'); p(0, 11, 16, 1, 'rgba(0,0,0,.18)');
+    return;
+  }
+  if (ch === '~') {
+    p(0, 0, 16, 16, T.fluid);
+    for (let i = 0; i < 3; i++) { const ox = (t * 14 + i * 6 + y * 5 + x * 3) % 20 - 4; p(ox, 3 + i * 5, 5, 1, T.fl2); }
+    return;
+  }
+  p(0, 0, 16, 16, ch === ',' ? T.floor2 : T.floor);
+  if (ch === ',') { if (h % 2) p(h % 13, (h >> 4) % 13, 2, 1, T.dc + '55'); p((h >> 8) % 14, (h >> 12) % 14, 1, 1, T.dc + '88'); }
+  else if (h % 5 === 0) p(h % 14, (h >> 5) % 14, 1, 1, 'rgba(255,255,255,.08)');
+  if (ch === '=') { p(0, 2, 16, 12, '#7a5534'); for (let i = 0; i < 4; i++) p(i * 4, 2, 1, 12, '#4e331d'); p(0, 2, 16, 1, '#a07448'); }
+  if (ch === 'T') {
+    const d = T.deco;
+    if (d === 'pillar' || d === 'tower') { p(4, 1, 8, 14, T.dc2); p(5, 1, 6, 14, T.dc); p(3, 0, 10, 2, T.dc); p(3, 13, 10, 3, T.dc2); p(6, 3, 1, 10, 'rgba(255,255,255,.3)'); if (d === 'tower') p(7, 5, 2, 3, '#1a1030'); }
+    if (d === 'crystal') { p(6, 2, 4, 12, T.dc); p(5, 5, 6, 8, T.dc); p(7, 0, 2, 3, T.dc); p(6, 4, 1, 8, '#ffffff88'); p(3, 9, 3, 5, T.dc2); p(10, 8, 3, 6, T.dc2); }
+    if (d === 'tree') { p(7, 9, 2, 6, '#6a4a2a'); circ(P(c, px, py, 1), 8, 6, 5, T.dc2); circ(P(c, px, py, 1), 7, 5, 3, T.dc); }
+    if (d === 'torch') { p(6, 6, 4, 9, '#5a3a1e'); p(5, 5, 6, 2, '#8a6a3a'); const f = Math.sin(t * 12 + x) > 0; p(6, 1 + (f ? 1 : 0), 4, 4, '#f6ae48'); p(7, 2 + (f ? 1 : 0), 2, 3, '#ffe08a'); }
+    if (d === 'bush') { circ(P(c, px, py, 1), 8, 9, 6, T.dc2); p(4, 6, 2, 2, T.dc); p(10, 5, 2, 2, T.dc); p(7, 10, 2, 2, '#ffe3f0'); p(11, 11, 2, 2, T.dc); }
+    if (d === 'valve') { p(3, 3, 10, 12, T.dc2); p(4, 4, 8, 10, T.dc); p(7, 4, 2, 10, T.dc2); }
+  }
+  if (ch === 'U' || ch === 'D') {
+    p(2, 0, 12, 16, '#08040a'); p(1, 0, 1, 16, T.top); p(14, 0, 1, 16, T.top);
+    const a = Math.floor(t * 3) % 2, up = ch === 'U';
+    p(6, up ? 6 - a : 7 + a, 4, 1, '#f4c350'); p(7, up ? 5 - a : 8 + a, 2, 1, '#f4c350');
+  }
+}
+
+/* ===================== WORLD ===================== */
+let room = ROOMS[S.room];
+const ent = {}; // per room computed
+function tileAt(x, y){ if (x < 0 || y < 0 || x >= COLS || y >= ROWS) return '#'; return room.map[y][x]; }
+const SOLID = new Set(['#', '~', 'T', 'S']);
+function monsterHere(){ const id = room.mon; if (!id || S.beaten[id]) return null; return room.bossPos ? {id, ...room.bossPos} : {id, x:10, y:11}; }
+function entityAt(x, y){
+  const n = room.npcs.find(n => n.x === x && n.y === y); if (n) return {type:'npc', ...n};
+  const m = monsterHere(); if (m && m.x === x && m.y === y) return {type:'mon', ...m};
+  return null;
+}
+function blocked(x, y){ return SOLID.has(tileAt(x, y)) || !!entityAt(x, y); }
+const DIRS = {up:[0, -1], down:[0, 1], left:[-1, 0], right:[1, 0]};
+
+const PL = {x:S.x, y:S.y, dir:S.dir, moving:false, fx:S.x, fy:S.y, ox:0, oy:0, t:0, path:[], then:null};
+const HA = {x:S.x, y:S.y + 1, fx:S.x, fy:S.y + 1, ox:S.x, oy:S.y + 1};
+let mode = 'title', held = null, last = performance.now(), T0 = performance.now();
+const STEP = 160;
+
+function startMove(dir){
+  PL.dir = dir; const [dx, dy] = DIRS[dir], nx = PL.x + dx, ny = PL.y + dy;
+  if (blocked(nx, ny)) return false;
+  PL.ox = PL.x; PL.oy = PL.y; PL.x = nx; PL.y = ny; PL.moving = true; PL.t = 0;
+  HA.ox = HA.x; HA.oy = HA.y; HA.x = PL.ox; HA.y = PL.oy;
+  beep('step'); return true;
+}
+function arrive(){
+  PL.moving = false; S.x = PL.x; S.y = PL.y; S.dir = PL.dir; save();
+  const ch = tileAt(PL.x, PL.y);
+  if (ch === 'D') { PL.path = []; return goRoom(S.room + 1, 10, 1, 'down'); }
+  if (ch === 'U') { PL.path = []; return goRoom(S.room - 1, 10, 11, 'up'); }
+  if (PL.path.length) { const d = PL.path.shift(); if (!startMove(d)) { PL.path = []; PL.then = null; } return; }
+  if (PL.then) { const f = PL.then; PL.then = null; f(); return; }
+}
+function update(dt){
+  if (mode !== 'play') return;
+  if (PL.moving) {
+    PL.t += dt;
+    if (PL.t >= STEP) arrive();
+  } else if (PL.path.length) {
+    const d = PL.path.shift(); if (!startMove(d)) { PL.path = []; PL.then = null; }
+  } else if (held) {
+    if (!startMove(held)) PL.dir = held;
+  }
+}
+function render(now){
+  const t = (now - T0) / 1000, T = THEMES[room.theme];
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) drawTile(ctx, room.map[y][x], x, y, T, t);
+  for (let y = 0; y < ROWS; y++) for (let x = 0; x < COLS; x++) if (room.map[y][x] === 'S') drawSign(ctx, x * TS, y * TS);
+  const k = PL.moving ? Math.min(1, PL.t / STEP) : 1;
+  const px = (PL.moving ? PL.ox + (PL.x - PL.ox) * k : PL.x) * TS, py = (PL.moving ? PL.oy + (PL.y - PL.oy) * k : PL.y) * TS;
+  const hx = (PL.moving ? HA.ox + (HA.x - HA.ox) * k : HA.x) * TS, hy = (PL.moving ? HA.oy + (HA.y - HA.oy) * k : HA.y) * TS;
+  const list = [];
+  room.npcs.forEach((n, i) => { if (LORE[n.id] && n.id !== 'cmd') return; list.push({y:n.y * TS, d:() => {
+    const info = n.id === 'cmd' ? LORE.cmd : HM[n.id];
+    const look = Math.abs(PL.x - n.x) > Math.abs(PL.y - n.y) ? (PL.x < n.x ? 'left' : 'right') : (PL.y < n.y ? 'up' : 'down');
+    drawBlob(ctx, n.x * TS, n.y * TS - 2, 1, info.col, info.acc, t, i * 1.7, look);
+    if (!S.met[n.id]) bubble(n.x * TS, n.y * TS - 14, t);
+  }}); });
+  room.npcs.forEach(n => { if (LORE[n.id] && n.id !== 'cmd' && !S.met[n.id]) bubble(n.x * TS, n.y * TS - 12, t); });
+  const m = monsterHere();
+  if (m) list.push({y:m.y * TS + 1, d:() => m.id === 'boss' ? drawMonster(ctx, m.x * TS - 16, m.y * TS - 30, 1.5, MON[m.id], t, false) : drawMonster(ctx, m.x * TS - 8, m.y * TS - 18, 1, MON[m.id], t, false)});
+  list.push({y:hy - 1, d:() => drawHamo(ctx, hx, hy - 4, 1, t)});
+  const frame = PL.moving ? (k < .5 ? 1 : 2) : 0;
+  list.push({y:py, d:() => drawPlayer(ctx, px, py - 2, 1, PL.dir, frame)});
+  list.sort((a, b) => a.y - b.y).forEach(o => o.d());
+}
+function bubble(x, y, t){ const b = Math.sin(t * 6) > 0 ? 0 : 1, p = P(ctx, x, y - b, 1); p(5, 0, 6, 7, '#fff'); p(6, 7, 2, 1, '#fff'); p(7, 1, 2, 3, '#e3425b'); p(7, 5, 2, 1, '#e3425b'); }
+
+function loop(now){
+  const dt = Math.min(50, now - last); last = now;
+  update(dt); render(now); renderArena(now);
+  requestAnimationFrame(loop);
+}
+
+/* ===================== ROOMS & TAGS ===================== */
+function roomMet(){ const req = room.npcs.map(n => n.id); return {req, n:req.filter(id => S.met[id]).length}; }
+function renderTags(){
+  const pos = (x, y) => `left:${(x + .5) / COLS * 100}%;top:${y / ROWS * 100}%`;
+  let html = room.areas.map(a => `<span class="tag area" style="left:${a.x / COLS * 100}%;top:${a.y / ROWS * 100}%">${esc(a.t)}</span>`).join('');
+  room.npcs.forEach(n => {
+    if (!S.met[n.id]) return;
+    const nm = n.id === 'cmd' ? '사령관' : LORE[n.id] ? LORE[n.id].name.split(' ').slice(0, 2).join(' ') : (HM[n.id].abbr && HM[n.id].abbr.length <= 4 && /^[A-Z]/.test(HM[n.id].abbr) ? HM[n.id].abbr : HM[n.id].name);
+    const c = n.id === 'cmd' || LORE[n.id] ? 'var(--gold)' : hcol(HM[n.id]);
+    html += `<span class="tag" style="${pos(n.x, n.y - .15)};--c:${c}">${esc(nm)}</span>`;
+  });
+  const m = monsterHere(); if (m) html += `<span class="tag mon" style="${pos(m.x, m.y - 1.2)}">${esc(MON[m.id].name)}</span>`;
+  $('#tags').innerHTML = html;
+}
+function renderHud(){
+  const lv = level(S.xp), cur = LEVELS[lv][0], nxt = LEVELS[lv + 1] ? LEVELS[lv + 1][0] : null;
+  $('#hudName').textContent = S.name || '탐험가';
+  $('#hudLv').textContent = `Lv.${lv + 1} ${LEVELS[lv][1]}`;
+  $('#xpBar').style.width = nxt ? ((S.xp - cur) / (nxt - cur) * 100) + '%' : '100%';
+  $('#xpTxt').textContent = nxt ? `${S.xp}/${nxt}` : `${S.xp}`;
+  $('#cardCnt').textContent = `${Object.keys(S.cards).length}/18`;
+  $('#bSound').textContent = soundOn ? '소리 켬' : '소리 끔';
+  $('#hudPlace').textContent = `${S.room + 1}/7 ${room.name}`;
+  const {req, n} = roomMet(), m = monsterHere();
+  $('#hudGoal').textContent = room.mon === 'boss' ? (S.beaten.boss ? '몸 왕국에 평화가 찾아왔다' : '목표: 카오스에게 다가가 Space로 결전 시작') :
+    !m ? `통과 완료 · 아래쪽 출구로 다음 지역에 갈 수 있어요` :
+    n < req.length ? `목표: 주민 만나기 ${n}/${req.length} → ${MON[room.mon].name} 물리치기` : `목표: 출구를 막은 ${MON[room.mon].name}에게 말 걸어 전투 시작!`;
+}
+function goRoom(i, x, y, dir){
+  if (i < 0 || i >= ROOMS.length) return;
+  mode = 'trans'; $('#fade').classList.add('on'); beep('door');
+  setTimeout(() => {
+    S.room = i; room = ROOMS[i]; S.x = x; S.y = y; S.dir = dir; save();
+    Object.assign(PL, {x, y, dir, moving:false, path:[], then:null});
+    Object.assign(HA, {x, y: dir === 'down' ? y - 1 : y + 1, ox:x, oy:y});
+    if (blocked(HA.x, HA.y) || tileAt(HA.x, HA.y) === 'U' || tileAt(HA.x, HA.y) === 'D') { HA.x = x; HA.y = y; }
+    renderTags(); renderHud();
+    $('#fade').classList.remove('on'); mode = 'play';
+    if (!S.intro[i]) setTimeout(() => say(room.intro, () => { S.intro[i] = 1; save(); }), 260);
+  }, 240);
+}
+
+/* ===================== INPUT ===================== */
+const KEYDIR = {ArrowUp:'up', ArrowDown:'down', ArrowLeft:'left', ArrowRight:'right', w:'up', s:'down', a:'left', d:'right', W:'up', S:'down', A:'left', D:'right', 'ㅈ':'up', 'ㄴ':'down', 'ㅁ':'left', 'ㅇ':'right'};
+document.addEventListener('keydown', e => {
+  if (e.target.matches && e.target.matches('input,textarea,select')) return;
+  if (!$('#modal').hidden) { if (e.key === 'Escape') closeModal(); return; }
+  if (D) { if (e.key === ' ' || e.key === 'Enter' || e.key === 'z' || e.key === 'Z') { e.preventDefault(); advance(); } return; }
+  if (mode === 'battle') return battleKey(e);
+  if (mode !== 'play') return;
+  if (KEYDIR[e.key]) { e.preventDefault(); held = KEYDIR[e.key]; PL.path = []; PL.then = null; if (!PL.moving && !e.repeat && !startMove(held)) PL.dir = held; }
+  else if (e.key === ' ' || e.key === 'Enter' || e.key === 'z' || e.key === 'Z' || e.key === 'j') { e.preventDefault(); if (!PL.moving) interact(); }
+});
+document.addEventListener('keyup', e => { if (KEYDIR[e.key] === held) held = null; });
+window.addEventListener('blur', () => held = null);
+document.querySelectorAll('#pad button').forEach(b => {
+  b.addEventListener('pointerdown', e => { e.preventDefault(); if (mode === 'play') { held = b.dataset.d; PL.path = []; PL.then = null; if (!PL.moving && !startMove(held)) PL.dir = held; } });
+  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, () => { if (held === b.dataset.d) held = null; }));
+});
+$('#aBtn').addEventListener('click', () => { if (D) advance(); else if (mode === 'play' && !PL.moving) interact(); });
+cv.addEventListener('pointerdown', e => {
+  if (mode !== 'play') return;
+  const r = cv.getBoundingClientRect(), tx = Math.floor((e.clientX - r.left) / r.width * COLS), ty = Math.floor((e.clientY - r.top) / r.height * ROWS);
+  if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+  walkTo(tx, ty);
+});
+function bfs(sx, sy, goal){
+  const prev = new Map(), key = (x, y) => x + ',' + y, q = [[sx, sy]]; prev.set(key(sx, sy), null);
+  while (q.length) {
+    const [x, y] = q.shift();
+    if (goal(x, y)) { const path = []; let k = key(x, y); while (prev.get(k)) { const [d, pk] = prev.get(k); path.unshift(d); k = pk; } return path; }
+    for (const [d, [dx, dy]] of Object.entries(DIRS)) {
+      const nx = x + dx, ny = y + dy, nk = key(nx, ny);
+      if (prev.has(nk) || blocked(nx, ny)) continue;
+      const ch = tileAt(nx, ny); if ((ch === 'U' || ch === 'D') && !goal(nx, ny)) continue;
+      prev.set(nk, [d, key(x, y)]); q.push([nx, ny]);
+    }
+  }
+  return null;
+}
+function walkTo(tx, ty){
+  if (PL.moving) return;
+  const target = entityAt(tx, ty) || (tileAt(tx, ty) === 'S' ? {type:'sign'} : null);
+  if (target) {
+    const adj = (x, y) => Math.abs(x - tx) + Math.abs(y - ty) === 1;
+    const path = bfs(PL.x, PL.y, adj); if (!path) return;
+    PL.path = path; PL.then = () => { PL.dir = Math.abs(PL.x - tx) ? (tx < PL.x ? 'left' : 'right') : (ty < PL.y ? 'up' : 'down'); interact(); };
+    if (!path.length) { const f = PL.then; PL.then = null; f(); }
+    return;
+  }
+  if (blocked(tx, ty)) return;
+  const path = bfs(PL.x, PL.y, (x, y) => x === tx && y === ty); if (path) { PL.path = path; PL.then = null; }
+}
+
+/* ===================== DIALOG ===================== */
+let D = null, typing = null;
+const reduce = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function speaker(who){
+  if (who === 'hamo') return {name:'하모', tag:'나노 탐사봇', c:'#F4C350', draw:(c, t) => drawHamo(c, 8, 8, 1, t)};
+  if (who === 'cmd') return {name:'시상 하부 사령관', tag:'간뇌', c:'#B49CFF', draw:(c, t) => drawBlob(c, 8, 10, 1, LORE.cmd.col, 4, t, 0, 'down')};
+  if (who === 'me') return {name:S.name || '탐험가', tag:'나노 탐험가', c:'#2fc6d6', draw:(c) => drawPlayer(c, 8, 10, 1, 'down', 0)};
+  if (LORE[who]) return {name:LORE[who].name, tag:'사령부 기록', c:'#F4C350', draw:(c) => drawSign(c, 8, 8)};
+  if (MON[who]) return {name:MON[who].name, tag:'불균형 몬스터', c:'#FF6E7E', draw:(c, t) => drawMonster(c, 0, 2, 1, MON[who], t, false)};
+  const h = HM[who]; return {name:h.name, tag:h.src, c:hcol(h), draw:(c, t) => drawBlob(c, 8, 10, 1, h.col, h.acc, t, 0, 'down')};
+}
+const pic = $('#dlgPic'), pctx = pic.getContext('2d');
+let picDraw = null;
+function say(lines, done){
+  D = {lines, i:0, done}; held = null; PL.path = [];
+  $('#dlg').hidden = false; $('#veil').hidden = false; showLine();
+  setTimeout(() => $('#dlgBox').focus({preventScroll:true}), 0);
+}
+function showLine(){
+  const [who, text] = D.lines[D.i], sp = speaker(who);
+  $('#dlgBox').style.setProperty('--c', sp.c);
+  picDraw = sp.draw;
+  $('#dlgName').innerHTML = `${esc(sp.name)}<span class="dlg-tag">${esc(sp.tag || '')}</span>`;
+  const el = $('#dlgText'); D.full = text;
+  clearInterval(typing); typing = null;
+  if (reduce) { el.textContent = text; return; }
+  let n = 0; el.textContent = ''; beep('talk');
+  typing = setInterval(() => { n += 2; el.textContent = text.slice(0, n); if (n % 8 === 0) beep('talk'); if (n >= text.length) { clearInterval(typing); typing = null; } }, 24);
+}
+function advance(){
+  if (!D) return;
+  if (typing) { clearInterval(typing); typing = null; $('#dlgText').textContent = D.full; return; }
+  D.i++;
+  if (D.i >= D.lines.length) { const f = D.done; D = null; $('#dlg').hidden = true; $('#veil').hidden = true; if (f) f(); }
+  else showLine();
+}
+$('#dlgBox').addEventListener('click', advance);
+$('#veil').addEventListener('click', advance);
+function drawPic(now){ if (!D || !picDraw) return; pctx.clearRect(0, 0, 32, 32); pctx.imageSmoothingEnabled = false; picDraw(pctx, (now - T0) / 1000); }
+
+/* ===================== INTERACT ===================== */
+function interact(){
+  const [dx, dy] = DIRS[PL.dir], tx = PL.x + dx, ty = PL.y + dy, e = entityAt(tx, ty);
+  if (!e) { if (tileAt(tx, ty) === 'S') return; return; }
+  if (e.type === 'mon') return meetMonster(e.id);
+  const id = e.id, first = !S.met[id];
+  if (id === 'cmd') return say((first ? LORE.cmd.lines : LORE.cmd.again).map(l => ['cmd', l]), () => { if (first) metDone(id, null); });
+  if (LORE[id]) return say(LORE[id].lines.map(l => [id, l]), () => { if (first) metDone(id, `${LORE[id].name} 기록 완료`); });
+  const h = HM[id];
+  say(h.lines.map(l => [id, l]).concat(first ? [[id, `내 능력을 담은 호르몬 카드를 줄게. 몬스터를 만나면 꼭 기억해 줘!`]] : []), () => { if (first) { S.cards[id] = 1; metDone(id, `호르몬 카드 획득: ${h.name}`); beep('card'); } });
+}
+function metDone(id, msg){
+  S.met[id] = 1; save(); addXP(5); renderTags(); renderHud();
+  if (msg) toast(`${msg} · +5 XP`);
+  const {req, n} = roomMet();
+  if (n === req.length && monsterHere()) setTimeout(() => say([['hamo', `이 지역 주민을 모두 만났어요! 이제 출구를 막은 ${MON[room.mon].name}에게 가서 Space를 눌러 맞서 봐요.`]]), 200);
+}
+function meetMonster(id){
+  const {req, n} = roomMet();
+  if (id !== 'boss' && n < req.length) return say([[id, MON[id].hello], ['hamo', `잠깐만요! 아직 만나지 않은 주민이 ${req.length - n}명 있어요. 머리 위에 ! 가 뜬 주민에게 먼저 배워야 이길 수 있어요.`]]);
+  say([[id, MON[id].hello], ['hamo', id === 'boss' ? '드디어 결전이에요! 모은 카드를 믿어요!' : '배운 지식으로 공격해요! 정답을 맞히면 몬스터에게 피해를 줘요.']], () => id === 'boss' ? startBoss() : startBattle(id));
+}
+
+/* ===================== BATTLE ===================== */
+let BT = null;
+const acv = document.createElement('canvas'); acv.width = 320; acv.height = 130; const actx2 = acv.getContext('2d'); actx2.imageSmoothingEnabled = false;
+function renderArena(now){
+  drawPic(now);
+  if (mode !== 'battle' || !BT) return;
+  const t = (now - T0) / 1000, T = THEMES[ROOMS[BT.room].theme], c = actx2, p = P(c, 0, 0, 1);
+  p(0, 0, 320, 130, T.wall); p(0, 70, 320, 60, T.floor);
+  for (let i = 0; i < 20; i++) p((i * 37 + Math.floor(t * 6)) % 330 - 10, 74 + (i * 13) % 50, 6, 1, T.floor2);
+  for (let i = 0; i < 8; i++) p(i * 44 + 10, 18 + (i % 3) * 10, 2, 2, 'rgba(255,255,255,.12)');
+  c.fillStyle = 'rgba(0,0,0,.25)'; c.beginPath(); c.ellipse(228, 104, 60, 12, 0, 0, Math.PI * 2); c.fill();
+  c.beginPath(); c.ellipse(78, 118, 40, 8, 0, 0, Math.PI * 2); c.fill();
+  const hit = BT.hitT && now - BT.hitT < 400, hurt = BT.hurtT && now - BT.hurtT < 400;
+  const sx = hit ? Math.sin(now / 20) * 4 : 0;
+  if (!BT.gone) drawMonster(c, 180 + sx, 10, 3, MON[BT.mon], t, hit && Math.floor(now / 70) % 2 === 0);
+  else { const k = Math.min(1, (now - BT.gone) / 600); c.globalAlpha = 1 - k; drawMonster(c, 180, 10 + k * 20, 3, MON[BT.mon], t, true); c.globalAlpha = 1; }
+  const lx = hurt ? Math.sin(now / 18) * 4 : 0, lunge = BT.hitT && now - BT.hitT < 200 ? 18 : 0;
+  drawPlayer(c, 50 + lx + lunge, 62, 3, 'right', 0);
+  drawHamo(c, 18, 52, 2, t);
+  if (BT.beam && now - BT.beam < 260) { c.fillStyle = '#f4c350'; c.fillRect(110, 86, 120, 4); c.fillStyle = '#fff'; c.fillRect(110, 87, 120, 2); }
+  if (hurt) { c.fillStyle = 'rgba(255,60,80,.25)'; c.fillRect(0, 0, 320, 130); }
+  const vis = $('#arena'); if (vis) { const v = vis.getContext('2d'); v.imageSmoothingEnabled = false; v.drawImage(acv, 0, 0); }
+}
+function knownPool(){ return H.filter(h => S.cards[h.id]).map(h => h.id); }
+function hOpts(h, pool){
+  const others = H.filter(x => x.id !== h.id);
+  const out = [h]; [...shuffle(others.filter(x => x.fam === h.fam)), ...shuffle(others.filter(x => pool.includes(x.id))), ...shuffle(others)].forEach(x => { if (out.length < 4 && !out.includes(x)) out.push(x); });
+  return shuffle(out).map(x => ({label:x.name + (x.abbr ? ` (${x.abbr})` : ''), ok:x.id === h.id}));
+}
+function qFor(h, type, review, pool){
+  if (type === 'gland') {
+    const others = Object.keys(GL).filter(g => g !== h.gland && g !== SIB[h.gland]);
+    return {hid:h.id, type, review, prompt:`${josa(h.name, '을', '를')} 분비하는 내분비샘은?`, opts:shuffle([h.gland, SIB[h.gland], ...shuffle(others).slice(0, 2)]).map(g => ({label:GL[g], ok:g === h.gland}))};
+  }
+  if (type === 'func') return {hid:h.id, type, review, quote:h.func, prompt:'이 일을 하는 호르몬은?', opts:hOpts(h, pool)};
+  return {hid:h.id, type:'clue', review, quote:pick(h.clues), prompt:'이 말을 한 주민은 누구일까?', opts:hOpts(h, pool)};
+}
+function remake(q){
+  if (q.fixed) return {...q, opts:shuffle(q.opts)};
+  return qFor(HM[q.hid], q.type, q.review, knownPool());
+}
+function genBattle(ri){
+  if (ri === 0) return FIXED.map(f => ({fixed:true, prompt:f.prompt, quote:f.quote, exp:f.exp, hid:f.hid, opts:shuffle(f.opts.map((l, k) => ({label:l, ok:k === 0})))}));
+  const mine = ROOMS[ri].npcs.map(n => n.id).filter(id => HM[id]);
+  const prev = H.filter(h => S.cards[h.id] && !mine.includes(h.id)), pool = knownPool();
+  const types = shuffle(['clue', 'gland', 'func', 'clue', 'func', 'gland']);
+  const qs = mine.map((id, k) => qFor(HM[id], types[k % 6], false, pool));
+  shuffle(prev).slice(0, mine.length >= 5 ? 1 : 2).forEach(h => qs.push(qFor(h, pick(['clue', 'gland', 'func']), true, pool)));
+  return shuffle(qs);
+}
+function startBattle(id){
+  mode = 'battle'; held = null;
+  const qs = genBattle(S.room);
+  BT = {mon:id, room:S.room, qs, max:qs.length, hp:qs.length, hearts:3, answered:false, xp:0, boss:false};
+  $('#battle').hidden = false; beep('hit');
+  renderBattle(`${josa(MON[id].name, '이', '가')} 길을 막아섰다! 정답을 맞혀 공격하자!`);
+}
+function battleShell(inner){
+  const m = MON[BT.mon];
+  return `<div class="b-top">
+      <div class="b-mon"><b>${esc(m.name)}</b><div class="hpwrap"><span>HP</span><div class="hp"><div style="width:${BT.hp / BT.max * 100}%"></div></div><span>${BT.hp}/${BT.max}</span></div></div>
+      <div><div class="hearts" aria-label="남은 체력 ${BT.hearts}">${'♥'.repeat(BT.hearts)}<i>${'♥'.repeat((BT.boss ? 5 : 3) - BT.hearts)}</i></div><div class="muted" style="font-size:12.5px;text-align:right">${esc(S.name || '탐험가')} · Lv.${level(S.xp) + 1}</div></div>
+    </div>
+    <div class="arena" id="arenaBox"><canvas id="arena" width="320" height="130"></canvas></div>${inner}`;
+}
+function renderBattle(msg, cls){
+  const q = BT.qs[0]; BT.answered = false;
+  $('#bIn').innerHTML = battleShell(`
+    <p class="msg ${cls || ''}" aria-live="polite">${esc(msg)}</p>
+    <div class="q">
+      ${q.review ? '<span class="chip">복습 공격 · 앞 지역</span>' : ''}
+      ${q.quote ? `<p class="quote">“${esc(q.quote)}”</p>` : ''}
+      <p class="qtext">${esc(q.prompt)}</p>
+      <div class="opts" id="opts">${q.opts.map((o, k) => `<button class="opt" data-k="${k}"><kbd>${k + 1}</kbd><span>${esc(o.label)}</span></button>`).join('')}</div>
+      <div id="fb" class="q"></div>
+    </div>`);
+  $('#opts').onclick = e => { const b = e.target.closest('.opt'); if (b) answer(+b.dataset.k); };
+}
+function popText(txt, bad){ const box = $('#arenaBox'); if (!box) return; const s = document.createElement('span'); s.className = 'pop' + (bad ? ' bad' : ''); s.textContent = txt; s.style.left = bad ? '14%' : '62%'; s.style.top = '18%'; box.appendChild(s); setTimeout(() => s.remove(), 950); }
+function answer(k){
+  if (BT.answered) return; BT.answered = true;
+  const q = BT.qs[0], ok = q.opts[k].ok, now = performance.now(), m = MON[BT.mon];
+  S.total++; if (ok) S.right++; save();
+  document.querySelectorAll('#opts .opt').forEach((b, j) => { b.disabled = true; b.classList.add(q.opts[j].ok ? 'right' : j === k ? 'wrong' : 'dim'); });
+  BT.qs.shift();
+  let msg, cls;
+  if (ok) {
+    BT.hp--; BT.hitT = now; BT.beam = now; BT.xp += 10; addXP(10); beep('hit'); setTimeout(() => beep('ok'), 120);
+    popText('-1 HP'); msg = `${S.name || '탐험가'}의 지식 공격! 효과는 굉장했다! (+10 XP)`; cls = 'ok';
+  } else {
+    BT.hearts--; BT.hurtT = now; beep('bad'); $('#bIn').classList.remove('shake'); void $('#bIn').offsetWidth; $('#bIn').classList.add('shake');
+    popText('♥ -1', true); BT.qs.push(remake(q));
+    msg = `${m.name}의 ${m.atk}! ♥ 1 감소… 이 문제는 나중에 다시 나온다.`; cls = 'bad';
+  }
+  document.querySelector('.hp div').style.width = (BT.hp / BT.max * 100) + '%';
+  document.querySelector('.hpwrap span:last-child').textContent = `${BT.hp}/${BT.max}`;
+  document.querySelector('.hearts').innerHTML = `${'♥'.repeat(BT.hearts)}<i>${'♥'.repeat(3 - BT.hearts)}</i>`;
+  const msgEl = document.querySelector('.msg'); msgEl.className = 'msg ' + cls; msgEl.textContent = msg;
+  const h = q.hid ? HM[q.hid] : null, end = BT.hp <= 0 || BT.hearts <= 0;
+  $('#fb').innerHTML = `${!ok && q.exp ? `<p>${esc(q.exp)}</p>` : ''}${h && !ok ? hCard(h) : ''}
+    <button class="btn gold" id="bNext" style="align-self:flex-start">${end ? '확인' : '다음 공격'} <kbd style="color:inherit;border-color:currentColor">Enter</kbd></button>`;
+  $('#bNext').onclick = battleNext; $('#bNext').focus({preventScroll:true});
+}
+function hCard(h){
+  return `<div class="hcard"><div class="nm">${esc(h.name)}${h.abbr ? ` <span class="abbr">${esc(h.abbr)}</span>` : ''}</div>
+    <dl><dt>분비</dt><dd><span style="color:${hcol(h)}">●</span> ${esc(h.src)}</dd><dt>표적</dt><dd>${esc(h.target)}</dd><dt>기능</dt><dd>${esc(h.func)}</dd></dl></div>`;
+}
+function battleNext(){
+  if (BT.hp <= 0) return winBattle();
+  if (BT.hearts <= 0) return loseBattle();
+  renderBattle('다음 공격을 준비하자!');
+}
+function winBattle(){
+  BT.gone = performance.now(); beep('win');
+  const m = MON[BT.mon];
+  setTimeout(() => {
+    S.beaten[BT.mon] = 1; addXP(30); save();
+    $('#battle').hidden = true; mode = 'play'; renderTags(); renderHud();
+    say([[BT.mon, m.bye], ['hamo', `${josa(m.name, '을', '를')} 물리쳤어요! 보너스 +30 XP. 이제 아래쪽 출구로 다음 지역에 갈 수 있어요!`]]);
+    BT = null;
+  }, 700);
+}
+function loseBattle(){
+  const id = BT.mon; $('#battle').hidden = true; mode = 'play'; BT = null;
+  say([['hamo', '으앗, 체력이 바닥났어요! 일단 물러나요. 주민들의 이야기를 다시 듣거나 카드 도감을 살펴보고 재도전해요.']], () => {
+    const ent = room.mon === 'm0' ? {x:9, y:5} : {x:10, y:1};
+    Object.assign(PL, {x:ent.x, y:ent.y, dir:'down', moving:false}); Object.assign(HA, {x:ent.x, y:ent.y, ox:ent.x, oy:ent.y});
+    S.x = ent.x; S.y = ent.y; save();
+  });
+}
+function battleKey(e){
+  if (!BT) return;
+  if (BT.boss) { if (e.key === 'Enter' && BT.solved && $('#bNext')) { e.preventDefault(); $('#bNext').click(); } return; }
+  if (!BT.answered && /^[1-4]$/.test(e.key)) { e.preventDefault(); answer(+e.key - 1); }
+  else if (BT.answered && e.key === 'Enter' && document.activeElement?.id !== 'bNext') { e.preventDefault(); battleNext(); }
+}
+
+/* ===================== BOSS ===================== */
+function startBoss(){
+  mode = 'battle'; held = null;
+  BT = {mon:'boss', room:S.room, boss:true, max:CRISES.length, hp:CRISES.length - (S.bossAt || 0), hearts:5, ci:S.bossAt || 0};
+  $('#battle').hidden = false; beep('hit'); loadCrisis();
+}
+function loadCrisis(){ const c = CRISES[BT.ci]; BT.step = 0; BT.val = c.start; BT.sel = null; BT.solved = false; BT.prev = null; renderCrisis(`카오스의 '${c.title}'! ${c.story}`, 'bad'); }
+const pct = (c, v) => Math.max(0, Math.min(100, (v - c.g.min) / (c.g.max - c.g.min) * 100));
+const fmt = (c, v) => v.toFixed(c.g.dec);
+function renderCrisis(msg, cls){
+  const c = CRISES[BT.ci], g = c.g, inBand = BT.val >= g.lo && BT.val <= g.hi, multi = c.steps.length > 1, show = BT.prev ?? BT.val;
+  $('#bIn').innerHTML = battleShell(`
+    <p class="msg ${cls || ''}" aria-live="polite">${esc(msg)}</p>
+    <div class="boss-grid">
+      <div class="crisis">
+        <p class="muted" style="font-size:13px;font-weight:700">위기 ${BT.ci + 1} / ${CRISES.length} · ${esc(c.title)}</p>
+        <div class="gauge"><span class="g-label">${esc(g.label)} 계기판</span>
+          <div class="g-track"><div class="g-band" style="left:${pct(c, g.lo)}%;width:${pct(c, g.hi) - pct(c, g.lo)}%"></div>
+            <div class="g-mark ${inBand ? 'good' : ''}" id="gMark" style="left:${pct(c, show)}%"><span class="g-val" id="gVal">${fmt(c, show)} ${esc(g.unit)}</span></div></div>
+          <div class="g-scale"><span>${fmt(c, g.min)}</span><span style="color:var(--ok)">정상 ${fmt(c, g.lo)}–${fmt(c, g.hi)}</span><span>${fmt(c, g.max)}</span></div></div>
+        <p class="qtext" style="font-size:18px">${esc(c.ask)}</p>
+        ${multi ? `<div class="slots">${c.steps.map((s, k) => `<span class="slot ${k < BT.step ? 'full' : ''}">${k < BT.step ? esc(HM[s.h].name) + ' ▲' : `${k + 1}번째`}</span>`).join('<span class="muted">→</span>')}</div>` : ''}
+        ${BT.solved ? `<button class="btn gold" id="bNext" style="align-self:flex-start">${BT.ci < CRISES.length - 1 ? '다음 위기로' : '카오스에게 마지막 일격!'} <kbd style="color:inherit;border-color:currentColor">Enter</kbd></button>` : `<button class="linkish" id="bHint">하모에게 힌트 듣기</button>`}
+      </div>
+      <div class="hand">
+        <p class="muted" style="font-size:13px;font-weight:700">호르몬 카드 손패</p>
+        <div class="hand-grid" id="hand">${H.map(h => `<button class="htile ${BT.sel === h.id ? 'sel' : ''}" data-h="${h.id}" style="--c:${hcol(h)}" ${BT.solved ? 'disabled' : ''}><span class="dot"></span><span>${esc(h.name)}</span></button>`).join('')}</div>
+        <p style="font-size:14.5px;min-height:1.5em">${BT.sel ? `선택: <b>${esc(HM[BT.sel].name)}</b> · 분비를 어떻게 할까?` : '카드를 한 장 고르세요.'}</p>
+        <div class="dirs"><button class="btn" id="dUp" ${BT.sel && !BT.solved ? '' : 'disabled'}>▲ 분비 증가</button><button class="btn" id="dDown" ${BT.sel && !BT.solved ? '' : 'disabled'}>▼ 분비 감소</button></div>
+      </div>
+    </div>`);
+  if (BT.prev != null) { const to = BT.val; BT.prev = null; requestAnimationFrame(() => requestAnimationFrame(() => { const mk = $('#gMark'); if (!mk) return; mk.style.left = pct(c, to) + '%'; $('#gVal').textContent = `${fmt(c, to)} ${g.unit}`; mk.classList.toggle('good', to >= g.lo && to <= g.hi); })); }
+  $('#hand').onclick = e => { const t = e.target.closest('.htile'); if (!t || BT.solved) return; BT.sel = t.dataset.h; beep('tick'); renderCrisis(msg, cls); };
+  $('#dUp').onclick = () => playCard('up'); $('#dDown').onclick = () => playCard('down');
+  if (BT.solved) { $('#bNext').onclick = nextCrisis; $('#bNext').focus({preventScroll:true}); }
+  else $('#bHint').onclick = () => say([['hamo', c.hint]]);
+}
+function playCard(dir){
+  const c = CRISES[BT.ci], s = c.steps[BT.step], h = HM[BT.sel], now = performance.now();
+  S.total++;
+  if (h.id === s.h && dir === s.dir) {
+    S.right++; save(); beep('ok'); BT.beam = now;
+    BT.prev = BT.val; BT.val = s.to; BT.step++; BT.sel = null;
+    if (BT.step >= c.steps.length) {
+      BT.solved = true; BT.hp--; BT.hitT = now; popText('-1 HP'); addXP(25); S.bossAt = BT.ci + 1; save(); beep('hit');
+      return renderCrisis(`${c.win} 카오스에게 큰 피해! (+25 XP)`, 'ok');
+    }
+    return renderCrisis(`${h.name} 분비 ${dir === 'up' ? '증가' : '감소'}! 명령이 다음 단계로 내려간다…`, 'ok');
+  }
+  save(); beep('bad'); BT.hearts--; BT.hurtT = now; popText('♥ -1', true);
+  const g = c.g, away = BT.val > g.hi ? 1 : -1;
+  BT.prev = BT.val; BT.val = Math.max(g.min, Math.min(g.max, BT.val + away * (g.max - g.min) * .04));
+  let why;
+  if (h.id === s.h) why = '카드는 맞았지만 방향이 반대예요!';
+  else if (c.steps.some((x, k) => k > BT.step && x.h === h.id)) why = `${h.name}도 필요하지만 아직 순서가 아니에요. 명령은 위에서부터 내려와요.`;
+  else why = `${josa(h.name, '은', '는')} '${h.short}' 담당이라 이 위기를 막지 못했다!`;
+  BT.sel = null;
+  if (BT.hearts <= 0) {
+    renderCrisis(why, 'bad');
+    setTimeout(() => {
+      $('#battle').hidden = true; mode = 'play'; BT = null;
+      say([['boss', '크하하! 균형은 무너졌다!'], ['cmd', '탐험가, 일단 물러나게! 카드 도감을 다시 살펴보고, 해결하지 못한 위기부터 다시 도전하게.']], () => {
+        Object.assign(PL, {x:10, y:2, dir:'down', moving:false}); Object.assign(HA, {x:10, y:1, ox:10, oy:1}); S.x = 10; S.y = 2; save();
+      });
+    }, 900);
+    return;
+  }
+  renderCrisis(`카오스의 ${MON.boss.atk}! ${why} ♥ -1`, 'bad');
+}
+function nextCrisis(){
+  BT.ci++;
+  if (BT.ci >= CRISES.length) {
+    BT.gone = performance.now(); beep('win');
+    setTimeout(() => {
+      S.beaten.boss = 1; S.done = true; S.bossAt = 0; addXP(60); save();
+      $('#battle').hidden = true; mode = 'play'; BT = null; renderTags(); renderHud();
+      say([['boss', MON.boss.bye], ['cmd', '해냈군, 탐험가! 몸 왕국의 모든 계기판이 정상 범위로 돌아왔네.'], ['hamo', `${S.name || '탐험가'} 님 덕분이에요! 호르몬들이 서로 협력하고, 때로는 반대로 작용하며 항상성을 지킨다는 걸 직접 확인했어요.`]], showCert);
+    }, 800);
+    return;
+  }
+  loadCrisis();
+}
+
+/* ===================== MODALS ===================== */
+function openModal(html){ const m = $('#modal'); m.innerHTML = `<div class="modal-box" role="dialog">${html}</div>`; m.hidden = false; held = null; const b = m.querySelector('button'); if (b) b.focus(); }
+function closeModal(){ $('#modal').hidden = true; }
+$('#modal').addEventListener('click', e => { if (e.target.id === 'modal' || e.target.closest('[data-close]')) closeModal(); });
+function openCodex(sel){
+  const order = ROOMS.flatMap(r => r.npcs.map(n => n.id)).filter(id => HM[id]);
+  openModal(`<div class="modal-head"><h2>호르몬 카드 도감 <span class="muted" style="font-family:var(--f-mono);font-size:17px">${Object.keys(S.cards).length}/18</span></h2><button class="btn small" data-close>닫기</button></div>
+    ${sel ? hCard(HM[sel]) : '<p class="muted">주민에게 말을 걸면 카드를 받아요. 받은 카드를 누르면 자세한 내용이 보여요.</p>'}
+    <div class="codex">${order.map(id => { const h = HM[id], got = S.cards[id];
+      return `<button class="cx ${got ? 'got' : 'lock'}" data-h="${id}" style="--c:${hcol(h)}" ${got ? '' : 'disabled'}><canvas width="16" height="16" data-pic="${id}"></canvas><span><span class="s">${got ? esc(h.src) : esc(GL[h.gland])}</span><span class="n">${got ? esc(h.name) : '???'}</span>${got ? `<span class="s">${esc(h.short)}</span>` : ''}</span></button>`; }).join('')}</div>`);
+  document.querySelectorAll('[data-pic]').forEach(cn => { const id = cn.dataset.pic, c = cn.getContext('2d'); if (S.cards[id]) drawBlob(c, 0, 0, 1, HM[id].col, HM[id].acc, 0, 0, 'down'); else { c.fillStyle = '#4D3458'; c.fillRect(4, 4, 8, 9); } });
+  document.querySelectorAll('.cx.got').forEach(b => b.onclick = () => openCodex(b.dataset.h));
+}
+function openHelp(){
+  openModal(`<div class="modal-head"><h2>조작법과 진행 방법</h2><button class="btn small" data-close>닫기</button></div>
+    <ul class="help">
+      <li><b>이동</b>: 방향키 또는 WASD. 화면을 클릭(터치)하면 그곳까지 걸어가요. 아래 십자 버튼도 쓸 수 있어요.</li>
+      <li><b>말 걸기</b>: 주민을 바라보고 Space / Enter / A 버튼. 주민을 클릭해도 다가가서 말을 걸어요.</li>
+      <li><b>진행</b>: 지역의 주민을 모두 만나 카드를 받으면 → 출구를 막은 몬스터와 퀴즈 배틀 → 이기면 아래 출구로 다음 지역!</li>
+      <li><b>배틀</b>: 정답을 맞히면 몬스터 HP가 줄어요. 틀리면 ♥가 줄고, 그 문제는 나중에 다시 나와요.</li>
+      <li><b>최종 결전</b>: 카오스가 일으킨 위기에 맞는 호르몬 카드를 골라 분비 증가·감소를 정해요.</li>
+      <li>진행 상황은 이 브라우저에 자동 저장돼요.</li>
+    </ul>
+    <button class="linkish" id="resetBtn">처음부터 다시 시작 (기록 삭제)</button>`);
+  $('#resetBtn').onclick = e => { const b = e.currentTarget; if (b.dataset.arm) { try { localStorage.removeItem(KEY); } catch(_){} S = fresh(); save(); location.reload(); return; } b.dataset.arm = '1'; b.textContent = '한 번 더 누르면 기록이 삭제됩니다'; };
+}
+function showCert(){
+  const acc = S.total ? Math.round(S.right / S.total * 100) : 0, d = new Date();
+  openModal(`<div class="cert">
+      <p class="muted" style="font-size:13px;font-weight:600;letter-spacing:.06em">몸 왕국 시상 하부 사령부 발행</p>
+      <h1>항상성 수호자 임명장</h1>
+      <p class="whoname">${esc(S.name || '탐험가')}</p>
+      <p class="body">위 탐험가는 여섯 내분비샘 지역을 탐험하며 호르몬 주민들을 만나 카드를 모으고, 불균형 몬스터 여섯과 항상성 붕괴의 왕 카오스를 물리쳐 몸 왕국의 균형을 되찾았기에 이 임명장을 드립니다.</p>
+      <div class="stats"><span>레벨 <b>${level(S.xp) + 1}</b> ${LEVELS[level(S.xp)][1]}</span><span>카드 <b>${Object.keys(S.cards).length}</b>/18</span><span>정답률 <b>${acc}</b>%</span><span>XP <b>${S.xp}</b></span></div>
+      <p class="muted">${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일</p>
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap"><button class="btn gold" data-close>몸속 계속 돌아다니기</button></div>`);
+}
+$('#bCodex').onclick = () => openCodex();
+$('#bHelp').onclick = openHelp;
+$('#bSound').onclick = () => { soundOn = !soundOn; try { localStorage.setItem('hq-sound', soundOn ? '1' : '0'); } catch(e){} renderHud(); };
+
+/* ===================== TITLE ===================== */
+function renderTitle(){
+  const has = S.started;
+  $('#startBox').innerHTML = has ? `
+    <p><b>${esc(S.name || '탐험가')}</b>의 모험 기록이 있어요 · Lv.${level(S.xp) + 1} · ${ROOMS[S.room].name} · 카드 ${Object.keys(S.cards).length}/18</p>
+    <div class="row"><button class="btn gold" id="tCont">이어서 모험하기</button><button class="btn" id="tNew">새로 시작</button></div>` : `
+    <label for="nameIn" class="muted" style="font-size:13px;font-weight:600">탐험가 이름</label>
+    <input id="nameIn" maxlength="12" placeholder="예: 2학년 3반 김하늘" autocomplete="off">
+    <div class="row"><button class="btn gold" id="tGo">모험 시작</button></div>
+    <button class="linkish" id="tUnlock">선생님용: 모든 몬스터를 비켜 세우고 시작 (수업 시연용)</button>`;
+  if (has) {
+    $('#tCont').onclick = () => begin();
+    $('#tNew').onclick = e => { const b = e.currentTarget; if (b.dataset.arm) { try { localStorage.removeItem(KEY); } catch(_){} S = fresh(); room = ROOMS[0]; renderTitle(); return; } b.dataset.arm = '1'; b.textContent = '한 번 더 누르면 기록 삭제'; };
+  } else {
+    const go = unlock => {
+      S = fresh(); S.name = $('#nameIn').value.trim() || '탐험가'; S.started = true;
+      if (unlock) ['m0','m1','m2','m3','m4','m5'].forEach(m => S.beaten[m] = 1);
+      save(); room = ROOMS[0]; Object.assign(PL, {x:9, y:5, dir:'up'}); Object.assign(HA, {x:9, y:6, ox:9, oy:6}); begin();
+      if (unlock) setTimeout(() => toast('모든 출구가 열렸어요. 아래로 내려가며 원하는 지역을 시연하세요.'), 600);
+    };
+    $('#tGo').onclick = () => go(false);
+    $('#nameIn').addEventListener('keydown', e => { if (e.key === 'Enter') go(false); });
+    $('#tUnlock').onclick = e => { const b = e.currentTarget; if (b.dataset.arm) return go(true); b.dataset.arm = '1'; b.textContent = '한 번 더 누르면 모든 출구가 열린 채로 시작해요'; };
+  }
+}
+function begin(){
+  beep('win');
+  room = ROOMS[S.room]; Object.assign(PL, {x:S.x, y:S.y, dir:S.dir, moving:false, path:[]});
+  HA.x = PL.x; HA.y = PL.y + (blocked(PL.x, PL.y + 1) ? 0 : 1); HA.ox = HA.x; HA.oy = HA.y;
+  $('#title').hidden = true; $('#bar').hidden = false; $('#controls').hidden = false;
+  mode = 'play'; renderTags(); renderHud();
+  if (!S.intro[S.room]) setTimeout(() => say(room.intro, () => { S.intro[S.room] = 1; save(); }), 300);
+  setTimeout(() => cv.focus && document.activeElement && document.activeElement.blur(), 0);
+}
+
+/* ===================== BOOT ===================== */
+room = ROOMS[S.room] || ROOMS[0];
+renderTitle(); renderHud();
+requestAnimationFrame(loop);
+</script>
+
+</body></html>
