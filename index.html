@@ -593,10 +593,41 @@ engines.memory=([title,pairs])=>{
 };
 // 08 / LIGHTS OUT
 engines.lights=([title,n,swaps])=>{
- let a=Array(n*n).fill(false),b=board(n);b.style.maxWidth='390px';gameBody().append(b);showNotice();function flip(i){let r=Math.floor(i/n),c=i%n;for(let [dy,dx] of [[0,0],[0,1],[0,-1],[1,0],[-1,0]]){let y=r+dy,x=c+dx;if(y>=0&&y<n&&x>=0&&x<n)a[y*n+x]=!a[y*n+x]}}
+ const a=Array(n*n).fill(false),b=board(n,'lights-board');
+ b.style.maxWidth='390px';
+ b.style.gridTemplateRows=`repeat(${n},minmax(0,1fr))`;
+ gameBody().append(b);showNotice();
+ function flip(i){
+  const row=Math.floor(i/n),col=i%n,changed=[];
+  for(const [dy,dx] of [[0,0],[-1,0],[1,0],[0,-1],[0,1]]){
+   const y=row+dy,x=col+dx;
+   if(y>=0&&y<n&&x>=0&&x<n){const index=y*n+x;a[index]=!a[index];changed.push(index)}
+  }
+  return changed;
+ }
  for(let i=0;i<swaps;i++)flip(rand(n*n));if(a.every(x=>!x))flip(0);
- function paint(){b.innerHTML='';a.forEach((on,i)=>{let c=cell(on?'✦':'');c.style.fontSize='28px';c.style.background=on?'#fbd45d':'#2b2a45';c.style.color='#80622a';c.style.boxShadow=on?'0 0 19px #ffcd5680,inset 2px 3px #fff8':'';c.onclick=()=>{if(done)return;flip(i);moves++;setScore(moves,'누른 횟수');paint();if(a.every(v=>!v))finish(true,'모든 불을 껐어요!')};b.append(c)})}
- paint();hint('누른 칸과 상하좌우가 바뀌어요.');setScore(0,'누른 횟수');
+ // Keep touch targets in place when a move changes the surrounding lights.
+ const cells=a.map((_,i)=>{
+  const c=cell();c.style.fontSize='28px';
+  c.onclick=()=>{
+   if(done)return;
+   const changed=flip(i);moves++;setScore(moves,'누른 횟수');paint();
+   setNotice(moves+'회 · '+changed.length+'칸 반전 · 남은 불 '+a.filter(Boolean).length+'개');
+   if(a.every(v=>!v))finish(true,'모든 불을 껐어요!');
+  };
+  b.append(c);return c;
+ });
+ function paint(){
+  cells.forEach((c,i)=>{
+   const on=a[i];c.textContent=on?'✦':'';
+   c.setAttribute('aria-pressed',String(on));
+   c.setAttribute('aria-label',(Math.floor(i/n)+1)+'행 '+(i%n+1)+'열 · '+(on?'켜짐':'꺼짐'));
+   c.style.background=on?'#fbd45d':'#2b2a45';c.style.color='#80622a';
+   c.style.boxShadow=on?'0 0 19px #ffcd5680,inset 2px 3px #fff8':'';
+  });
+ }
+ paint();setNotice('남은 불 '+a.filter(Boolean).length+'개');
+ hint('누른 칸 + 바로 위·아래·왼쪽·오른쪽이 함께 바뀌어요.');setScore(0,'누른 횟수');
 };
 // 09 / MAZE, DFS spanning tree
 engines.maze=([title,n])=>{
