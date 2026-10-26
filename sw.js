@@ -1,5 +1,5 @@
-/* O.Poong Game — cache only same-origin game files, never third-party ads. */
-const CACHE='opoong-game-shell-2.1.5-lights';
+/* O.Poong Game — cache only same-origin game files, no third-party requests. */
+const CACHE='opoong-game-shell-2.1.6-no-ads';
 const SHELL=['./','./index.html','./sw.js','./hormone-expedition.html'];
 self.addEventListener('install',event=>{event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));});
 self.addEventListener('activate',event=>{event.waitUntil(Promise.all([caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith('opoong-game-shell-')&&k!==CACHE).map(k=>caches.delete(k)))),self.clients.claim()]));});
