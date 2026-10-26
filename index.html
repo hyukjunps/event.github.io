@@ -57,14 +57,14 @@ main{min-width:0;flex:1;max-width:1710px;margin:0 auto;padding:33px clamp(18px,3
 .modal-content{grid-template-columns:minmax(0,1fr) 375px}
 .finish-overlay{position:fixed;inset:0;z-index:90;overflow-y:auto;padding:10px;align-items:flex-start;overscroll-behavior:contain}
 .finish-card{margin:auto;width:min(406px,calc(100vw - 20px));max-height:calc(100dvh - 20px);overflow:auto;padding:18px 12px}
-@media(max-width:1320px),(max-height:745px){}
+
 @media(max-width:800px){
  .modal-content{display:flex;flex-direction:column}
  .modal-stage{max-height:calc(100dvh - 22px)}
  .game-sidebar{min-width:0}
  .finish-card{width:min(406px,calc(100vw - 16px));padding:14px 8px}
 }
-@media(max-width:345px){}
+
 
 /* O.Poong Game 2.3 — no-scroll game layouts: controls always visible */
 .modal-back{padding:8px;overflow:hidden}
@@ -86,9 +86,9 @@ main{min-width:0;flex:1;max-width:1710px;margin:0 auto;padding:33px clamp(18px,3
 .game-sidebar .game-action{flex:0 0 auto}
 .finish-overlay{overflow:hidden;align-items:center}
 .finish-card{max-height:calc(100dvh - 16px);overflow:hidden;margin:auto}
-@media(min-width:1320px) and (min-height:840px){}
-@media(min-width:1050px) and (min-height:970px){}
-@media(max-height:750px){}
+
+
+
 /* Compact ramen shop: every kitchen action remains on the same viewport. */
 .ramen-game{width:min(670px,100%);max-height:100%;font-size:11px;display:flex;flex-direction:column;gap:5px;min-height:0;justify-content:space-between}
 .ramen-game .ramen-head{margin:0;flex-shrink:0}
@@ -188,9 +188,8 @@ main{min-width:0;flex:1;max-width:1710px;margin:0 auto;padding:33px clamp(18px,3
  .mode-option{padding:3px 1px}
  .ramen-game{gap:2px}
  .ramen-game .ramen-status{min-height:12px}
- .finish-short-dock{margin-top:3px}
 }
-@media(max-height:530px){}
+
 
 /* Teacher-created RPG: isolated document preserves its own UI and controls. */
 .hormone-back{padding:8px}.hormone-dialog{width:min(1100px,100%);height:calc(100dvh - 16px);display:flex;flex-direction:column;overflow:hidden;border:1px solid #62456d;border-radius:18px;background:#120a15;box-shadow:0 24px 80px #0008}.hormone-head{display:flex;align-items:center;gap:14px;padding:10px 14px;background:#26172d;flex-shrink:0}.hormone-head>div{flex:1;min-width:0}.hormone-head strong{display:block;font-size:16px;color:#f4c350}.hormone-head small{display:block;margin-top:3px;font-size:11px;color:#bfa8bf}.hormone-head a{font-size:12px;color:#e1c8f5}.hormone-head button{white-space:nowrap;padding:9px 12px}.hormone-frame{display:block;width:100%;flex:1;min-height:0;border:0;background:#120a15}@media(max-width:600px){.hormone-back{padding:0}.hormone-dialog{height:100dvh;border-radius:0;border:0}.hormone-head{gap:8px;padding:8px 10px}.hormone-head small{font-size:10px}.hormone-head strong{font-size:14px}.hormone-head button{font-size:11px;padding:8px}}
